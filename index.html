@@ -493,8 +493,10 @@ details.more[open] summary::before,details.sites[open] summary::before{transform
      l    warehouse location, Jackson's naming (5 Oct 2026): R<row>B<bay>S<shelf>, e.g. R5B4S123 = row 5, bay 4, shelves 1-3;
           (L) (M) (R) = the left / middle / right bin; "Back / ...", "Mid / ..." off the racks; "" = not known yet.
           Kept in data/warehouse_layout.json (tools/warehouse_layout.py) and written here by tools/apply_layout.js
-     b    Jackson's bin count (2 Oct 2026): [per bin, bin unit, bins], e.g. [15,"Box of 100",12]; written by tools/apply_layout.js.
-          core.binInfo gives the bin capacity where the bin unit is clear
+     b    Jackson's bin count (2 Oct 2026): [per bin, bin unit, bins], e.g. [15,"Box of 100",12]; the most a spot holds (6 Oct):
+          [null, bin unit, bins, total], e.g. [null,"Box of 200",3,112]; an item kept two ways: a list of both, e.g.
+          [[100,"Each",3],[null,"Case of 50",3,8]]. Written by tools/apply_layout.js; core.binInfo gives the bin capacity where
+          the bin unit is clear
      u    packing-slip unit label
      p    pieces in one packing-slip unit (stock is kept in pieces)
      k    pieces in a box/pack when a site writes "1 box" in comments (EACH items)
@@ -521,7 +523,7 @@ details.more[open] summary::before,details.sites[open] summary::before{transform
 var CATALOG = [
   // ---------------- Swabs and Cultures ----------------
   {id:"COL-BLOODCULT", n:"Blood Culture Bottles", s:"Swabs and Cultures", l:"R3B4S2", b:[25,"Bottle",1], u:"BOTTLE", p:1, x:["Blood Culture Bottles"], v:"Labcorp", vi:"125184", syn:["blood culture"], slip:1, sn:"00810010892140"},
-  {id:"COL-COBASUNI", n:"cobas PCR Uni Swab Kit", s:"Swabs and Cultures", l:"R3B1S34", b:[100,"Kit",3], u:"PK/10", p:10, of:"CollectionSupplies_CobasPCRUniSwabKit10pk", op:10, x:["cobas PCR Uni Swab Kit"], syn:["cobas swab","uni swab","cobas uni"], slip:1, vn:["7958021190"], vu:{BX:100}},
+  {id:"COL-COBASUNI", n:"cobas PCR Uni Swab Kit", s:"Swabs and Cultures", l:"R3B1S34", b:[[100,"Kit",3],[null,"Box of 100",3,8]], u:"PK/10", p:10, of:"CollectionSupplies_CobasPCRUniSwabKit10pk", op:10, x:["cobas PCR Uni Swab Kit"], syn:["cobas swab","uni swab","cobas uni"], slip:1, vn:["7958021190"], vu:{BX:100}},
   {id:"COL-ESWAB", n:"E-Swab Culture", s:"Swabs and Cultures", l:"R3B3S1 (L-M)", b:[140,"Each",2], u:"PK/10", p:10, of:"CollectionSupplies_ESwabCulture10pk", op:10, x:["E-Swab Culture"], syn:["eswab","e swab","e-swab"], slip:1, vn:["B220532","220532"], vu:{BG:50,PK:50,BX:50}},
   {id:"COL-BVSWAB", n:"BV Swab Collection Kit - Green Top", s:"Swabs and Cultures", l:"R3B2S3", b:[150,"Each",3], u:"PK/15", p:15, of:"CollectionSupplies_GreenTopBVSwabCollectionKit15pk", op:15, x:["BV Swab Collection Kit - Green Top"], syn:["bv swab","bv kit","bv collection"], slip:1},
   {id:"COL-NPSWAB", n:"Nasopharyngeal Swabs", s:"Swabs and Cultures", l:"R3B2S1", b:[1000,"Each",3], u:"PK/15", p:15, of:"CollectionSupplies_NasopharyngealSwabs15pk", op:15, x:["Nasopharyngeal Swabs"], syn:["nasopharyngeal","np swab","nasal swab"], slip:1, vn:["851504"]},
@@ -546,14 +548,14 @@ var CATALOG = [
   {id:"COL-FORMALIN", n:"Epredia 10% Neutral Buffered Formalin", s:"Cups and Containers", l:"R3B4S1", b:[75,"Each, small bin",1], u:"PK/5", p:5, x:["Formalin 10% Pathology Container"], v:"Labcorp", vi:"19164", syn:["formalin","nbf","buffered formalin"], slip:1, sn:"00673693175470"},
 
   // ---------------- Kits and Media ----------------
-  {id:"COL-COBASURINE", n:"cobas PCR Urine Sample Kit", s:"Kits and Media", l:"R3B1S12", b:[100,"Kit",3], u:"PK/25", p:25, of:"CollectionSupplies_CobasPCRUrineSampleKit25pk", op:25, x:["cobas PCR Urine Sample Kit"], syn:["cobas urine","pcr urine"], slip:1, vn:["5170486190"], vu:{BX:100}},
+  {id:"COL-COBASURINE", n:"cobas PCR Urine Sample Kit", s:"Kits and Media", l:"R3B1S12", b:[[100,"Kit",3],[null,"Box of 100",3,8]], u:"PK/25", p:25, of:"CollectionSupplies_CobasPCRUrineSampleKit25pk", op:25, x:["cobas PCR Urine Sample Kit"], syn:["cobas urine","pcr urine"], slip:1, vn:["5170486190"], vu:{BX:100}},
   {id:"COL-COLOFIT", n:"ColoFit Kit", s:"Kits and Media", l:"R3B4S1", b:[30,"Each, small bin",1], u:"KIT", p:1, x:["ColoFit Kit","Polymedco OC Auto-Sampling Bottle"], v:"Labcorp", vi:"66671", syn:["colofit","colo fit","fit kit","polymedco","oc auto","polymedco oc auto sampling bottle"], slip:1, vu:{CS:25}, sn:"00816917020495"},
   {id:"COL-GLUCOLA-50", n:"Glucola Drink - 50g", s:"Kits and Media", l:"R4B3S34", b:[16,"Bottle",2], u:"BOTTLE", p:1, syn:["glucola 50","50g glucola","50 g glucola"], slip:1, vn:["22-026-203"], vu:{CS:24}},
   {id:"COL-GLUCOLA-75", n:"Glucola Drink - 75g", s:"Kits and Media", l:"R4B3S34", b:[16,"Bottle",2], u:"PK/6", p:6, of:"CollectionSupplies_GlucolaDrinks75g6pk", op:6, x:["Glucola Drinks (75g)"], syn:["glucola 75","75g glucola","glucola"], no:["50g","100g"], slip:1, vn:["22-026-207","AZR10FP075","AZR10O075"], vu:{CS:24}},
   {id:"COL-GLUCOLA-100", n:"Glucola Drink - 100g", s:"Kits and Media", l:"R4B3S34", b:[16,"Bottle",2], u:"BOTTLE", p:1, syn:["glucola 100","100g glucola","100 g glucola"], slip:1},
-  {id:"COL-HEELWARM", n:"Heel Warmers", s:"Kits and Media", l:"R6B1S4", u:"PK/10", p:10, x:["Heel Warmers"], v:"Labcorp", vi:"134749", syn:["heel warmer","heelwarmer"], slip:1, vn:["521487"], vu:{CS:100}, sn:"00840216119291"},
+  {id:"COL-HEELWARM", n:"Heel Warmers", s:"Kits and Media", l:"R6B1S4", b:[null,"Pack of 10",3,15], u:"PK/10", p:10, x:["Heel Warmers"], v:"Labcorp", vi:"134749", syn:["heel warmer","heelwarmer"], slip:1, vn:["521487"], vu:{CS:100}, sn:"00840216119291"},
   {id:"COL-LEADCARD", n:"Lead Test Kit / Filter Paper Card", s:"Kits and Media", l:"R2B3S2", b:[200,"Each",1], u:"PK/10", p:10, x:["Lead Test Kit / Filter Paper Card"], v:"Labcorp", vi:"107973", syn:["lead","filter paper","lead card","lead kit","lab11692"], slip:1, vu:{CS:50}},
-  {id:"COL-SALIVARY", n:"LabCorp Salivary Hormone Collection Kit", s:"Kits and Media", l:"R3B4S2", u:"KIT", p:1, x:["Salivette Collection Device"], v:"Labcorp", vi:"123724", syn:["salivary hormone","salivary kit","salivette","salivette collection device"], slip:1},
+  {id:"COL-SALIVARY", n:"LabCorp Salivary Hormone Collection Kit", s:"Kits and Media", l:"R3B4S2", b:[null,"Kit",3,32], u:"KIT", p:1, x:["Salivette Collection Device"], v:"Labcorp", vi:"123724", syn:["salivary hormone","salivary kit","salivette","salivette collection device"], slip:1},
   {id:"COL-PARAPAK-G", n:"Para-Pak - Gray", s:"Kits and Media", l:"R3B4S1", b:[50,"Each, small bin",1], u:"PK/5", p:5, x:["Para-Pak - Gray"], v:"Labcorp", vi:"49627", syn:["para pak gray","~parapak","~stool kit","~stool container","~stool","parapak gray","gray para pak","gray stool","gray top stool","grey stool"], slip:1},
   {id:"COL-PARAPAK-P", n:"Para-Pak - Pink", s:"Kits and Media", l:"R3B4S1", u:"PK/5", p:5, x:["Para-Pak - Pink"], v:"Labcorp", vi:"49627", syn:["para pak pink","~parapak","~stool kit","~stool container","~stool","parapak pink","pink para pak","pink stool"], slip:1},
   {id:"COL-PARAPAK-W", n:"Para-Pak - White", s:"Kits and Media", l:"R3B4S1", b:[100,"Each, small bin",1], u:"PK/5", p:5, x:["Para-Pak - White"], v:"Labcorp", vi:"59517", syn:["para pak white","~parapak","~stool kit","~stool container","~stool","parapak white","white para pak","white stool"], slip:1},
@@ -561,15 +563,15 @@ var CATALOG = [
   {id:"COL-PARAPAK-C", n:"Para-Pak Clean (ref 900312)", s:"Kits and Media", l:"R3B4", u:"EACH", p:1, x:["Para-Pak Clean"], vi:"900312", syn:["para pak clean","900312","clean vial"], slip:1},
   {id:"COL-QFT", n:"Quantiferon Kits (TB Gold)", s:"Kits and Media", l:"R3B4S1", b:[31,"Kit, small bin",1], u:"PK/5", p:5, of:"CollectionSupplies_QuantiferonKitsTBGold5pk", op:5, x:["Quantiferon Kits (TB Gold)"], syn:["quantiferon","qft","tb gold"], slip:1, vu:{CS:24}},
   {id:"COL-TONGUE-S", n:"Tongue Depressors - Sterile", s:"Kits and Media", l:"R6B1S2", b:[50,"Box of 100",2], u:"PK/100", p:100, x:["Tongue Depressors"], v:"McKesson", vi:"22-363-169", syn:["tongue depressor"], slip:1, vn:["508714","24-202-S"], vu:{BX:100,CS:1000}, sn:"00612479137103"},
-  {id:"COL-VIROMED", n:"ViroMed FDA Kit", s:"Kits and Media", l:"R3B4S2", u:"KIT", p:1, x:["ViroMed FDA Kit"], v:"Labcorp", vi:"73286", syn:["viromed fda","viromed"], no:["ivf","donor"], slip:1},
-  {id:"POC-BREATHID", n:"BreathID Kit (H. pylori)", s:"Kits and Media", l:"R3B4S3", u:"KIT", p:1, x:["BreathID Kit (H. pylori)"], v:"Labcorp", vi:"116773", syn:["breathid","breath id","breath kit","breath test","h pylori breath"], slip:1, sn:"00350402100144"},
+  {id:"COL-VIROMED", n:"ViroMed FDA Kit", s:"Kits and Media", l:"R3B4S2", b:[null,"Kit",3,20], u:"KIT", p:1, x:["ViroMed FDA Kit"], v:"Labcorp", vi:"73286", syn:["viromed fda","viromed"], no:["ivf","donor"], slip:1},
+  {id:"POC-BREATHID", n:"BreathID Kit (H. pylori)", s:"Kits and Media", l:"R3B4S3", b:[null,"Kit",3,27], u:"KIT", p:1, x:["BreathID Kit (H. pylori)"], v:"Labcorp", vi:"116773", syn:["breathid","breath id","breath kit","breath test","h pylori breath"], slip:1, sn:"00350402100144"},
   {id:"COL-APTIMA-URINE", n:"Aptima Urine Specimen Collection Kit", s:"Kits and Media", l:"R3B3", u:"KIT", p:1, syn:["aptima urine"], slip:1},
   {id:"COL-PINWORM", n:"Pinworm Paddle", s:"Kits and Media", l:"R3B4S2", b:[100,"Each, small bin",1], u:"EACH", p:1, syn:["pinworm"], slip:1},
-  {id:"COL-DITEK-HPV", n:"DITEK HPV Test Kit", s:"Kits and Media", l:"R3B4S3", u:"KIT", p:1, syn:["ditek","hpv test kit","hpv kit"], slip:1},
-  {id:"COL-POC-REVEAL", n:"LabCorp POC Reveal Kit", s:"Kits and Media", l:"R3B4S3", u:"KIT", p:1, syn:["reveal kit","poc reveal"], slip:1},
+  {id:"COL-DITEK-HPV", n:"DITEK HPV Test Kit", s:"Kits and Media", l:"R3B4S3", b:[null,"Kit",3,16], u:"KIT", p:1, syn:["ditek","hpv test kit","hpv kit"], slip:1},
+  {id:"COL-POC-REVEAL", n:"LabCorp POC Reveal Kit", s:"Kits and Media", l:"R3B4S3", b:[null,"Kit",3,24], u:"KIT", p:1, syn:["reveal kit","poc reveal"], slip:1},
   {id:"COL-MEDSCAND", n:"Medscand Sample Collection Kit", s:"Kits and Media", l:"R3B3", u:"KIT", p:1, syn:["medscand"], slip:1},
   {id:"COL-THINPREP", n:"ThinPrep Vial", s:"Kits and Media", l:"R3B3S4 (L, R)", u:"EACH", p:1, syn:["thinprep","thin prep","pap vial"], slip:1},
-  {id:"COL-VIROMED-IVF", n:"ViroMed IVF Living Donor Kit", s:"Kits and Media", l:"R3B4S2", u:"KIT", p:1, syn:["viromed ivf","ivf","living donor"], slip:1},
+  {id:"COL-VIROMED-IVF", n:"ViroMed IVF Living Donor Kit", s:"Kits and Media", l:"R3B4S2", b:[null,"Kit",3,20], u:"KIT", p:1, syn:["viromed ivf","ivf","living donor"], slip:1},
   {id:"COL-BOX-LYMPH", n:"Lymphocyte Subset Panel Box (Red)", s:"Kits and Media", l:"R2B3S4", b:[18,"Box",1], u:"BOX", p:1, x:["Lymphocyte Subset Panel Box (Red)"], v:"Labcorp", syn:["lymphocyte subset","lymphocyte panel","lymphocyte box"], slip:0},
   {id:"COL-BOX-NEUTRO", n:"Neutrophil Oxidative Burst Box (Green)", s:"Kits and Media", l:"R2B3S4", b:[18,"Box",1], u:"BOX", p:1, x:["Neutrophil Oxidative Burst Box (Green)"], v:"Labcorp", syn:["neutrophil","oxidative burst"], slip:0},
   {id:"COL-BOX-ONCO", n:"Labcorp Oncology Hematopathology Box (Black and White)", s:"Kits and Media", l:"R2B3S4", b:[24,"Box",1], u:"BOX", p:1, x:["Labcorp Oncology Hematopathology Box (Black and White)","Labcorp Oncology Hematopatholgy Box (Black and White)"], v:"Labcorp", syn:["oncology box","hematopathology","oncology hematopathology"], slip:0},
@@ -614,14 +616,14 @@ var CATALOG = [
   {id:"COL-MONOVETTE", n:"Urine Monovette", s:"Tubes", l:"R3B4S2", b:[100,"Each, small bin",1], u:"PK/5", p:5, x:["Urine Monovette"], v:"Labcorp", vi:"56015", syn:["monovette"], slip:1},
 
   // ---------------- Needles and Holders ----------------
-  {id:"COL-BFLY-23", n:"Butterfly Needle (23G)", s:"Needles and Holders", l:"R6B3S34", u:"PK/50", p:50, x:["Butterfly Needle 23G","Butterfly Needle (23G)"], v:"McKesson", vi:"367283", syn:["butterfly","23g butterfly","23 g butterfly","butterfly 23g","bfly"], no:["21g","21 g"], slip:1, vn:["222269"], vu:{BX:50,CS:200}, sn:"30382903672838"},
-  {id:"COL-BFLY-21", n:"Butterfly Needle (21G)", s:"Needles and Holders", l:"R6B3S34", u:"EACH", p:1, k:50, syn:["21g butterfly","21 g butterfly","butterfly 21g"], slip:1},
+  {id:"COL-BFLY-23", n:"Butterfly Needle (23G)", s:"Needles and Holders", l:"R6B3S34", b:[null,"Box of 50",6,208], u:"PK/50", p:50, x:["Butterfly Needle 23G","Butterfly Needle (23G)"], v:"McKesson", vi:"367283", syn:["butterfly","23g butterfly","23 g butterfly","butterfly 23g","bfly"], no:["21g","21 g"], slip:1, vn:["222269"], vu:{BX:50,CS:200}, sn:"30382903672838"},
+  {id:"COL-BFLY-21", n:"Butterfly Needle (21G)", s:"Needles and Holders", l:"R6B3S34", b:[null,"Box of 50",6,208], u:"EACH", p:1, k:50, syn:["21g butterfly","21 g butterfly","butterfly 21g"], slip:1},
   {id:"COL-NEEDLE-22", n:"Straight Needle (22G)", s:"Needles and Holders", l:"R6B3S12", b:[48,"Box of 48",6], u:"PK/48", p:48, of:"CollectionSupplies_StraightNeedle22G48pk", op:48, x:["Straight Needle 22G","Straight Needle (22G)"], v:"McKesson", syn:["22g straight","22g needle","22 g needle","22 gauge","straight 22g"], no:["butterfly"], slip:1, vn:["368608","02-683-102"], vu:{CS:480,BX:48,PK:48}},
   {id:"COL-NEEDLE-21", n:"Straight Needle (21G)", s:"Needles and Holders", l:"R6B2S1234", b:[48,"Box of 48",12], u:"PK/48", p:48, c:480, of:"CollectionSupplies_StraightNeedle21G48pk", op:48, x:["Straight Needle 21G","Straight Needle (21G)"], v:"McKesson", syn:["21g straight","21g needle","21 g needle","21 gauge","straight 21g"], no:["butterfly"], slip:1, vn:["373902","368607","02-683-101"], vu:{CS:480,BX:48,PK:48}},
   {id:"COL-TUBEHOLDER", n:"Vacutainer Tube Holder (Hub)", s:"Needles and Holders", l:"R7B4S1234", b:[4,"Bag of 250",12], u:"PK/250", p:250, of:"CollectionSupplies_VacutainerTubeHolderHub250pk", op:250, x:["Vacutainer Tube Holder (Hub)"], v:"McKesson", syn:["hub","tube holder","vacutainer holder","holders"], slip:1, vn:["458363","364815","22-289-953"], vu:{CS:1000,BG:250,PK:250}},
   {id:"COL-SYRINGE", n:"Syringes", s:"Needles and Holders", l:"R8B3", u:"EACH", p:1, syn:["syringe"], slip:1},
   {id:"COL-LANCET", n:"Lancets - Sterile", s:"Needles and Holders", l:"R6B1S3 (L)", b:[16,"Box, small bin",2], u:"EACH", p:1, k:100, syn:["lancet","sterile lancet"], no:["pediatric","peds"], slip:1},
-  {id:"COL-LANCET-CONTACT", n:"Microtainer Contact Lancets", s:"Needles and Holders", l:"R6B1S4", u:"BOX", p:200, x:["Microtainer Contact Lancets"], syn:["contact lancet","contact activated lancet"], slip:0, vu:{BX:200}},
+  {id:"COL-LANCET-CONTACT", n:"Microtainer Contact Lancets", s:"Needles and Holders", l:"R6B1S4", b:[null,"Box of 200",3,36], u:"BOX", p:200, x:["Microtainer Contact Lancets"], syn:["contact lancet","contact activated lancet"], slip:0, vu:{BX:200}},
   {id:"COL-LANCET-PED", n:"Lancets - Pediatric", s:"Needles and Holders", l:"R6B1S4", b:[6,"Box, small bin",2], u:"EACH", p:1, k:100, syn:["pediatric lancet","peds lancet"], slip:1},
 
   // ---------------- General Supplies ----------------
@@ -629,13 +631,13 @@ var CATALOG = [
   {id:"GEN-BANDAID", n:"Bandaid Boxes", s:"General Supplies", l:"R7B3S4 (R)", b:[96,"Box of 100",1], u:"PK/100", p:100, of:"GeneralSupplies_Bandaids100pk", op:100, x:["Bandaids","Bandaid Boxes"], v:"McKesson", syn:["bandaid","band aid","bandage"], slip:1, vn:["466871","466872","16-4813","16-4811"], vu:{BX:100}},
   {id:"GEN-BIOBAG", n:"Biohazard Specimen Bags", s:"General Supplies", l:"R2B1S1234", b:[64,"Pack of 100",12], u:"PK/100", p:100, of:"GeneralSupplies_BiohazardSpecimenBags100pk", op:100, x:["Biohazard Specimen Bags"], syn:["biohazard bag","specimen bag","biohazard"], slip:1, vu:{PK:100,CS:1000}, vn:["547075","79-LAB20609"]},
   {id:"GEN-CASTILE", n:"Castile Soap Towelettes", s:"General Supplies", l:"R7B3S4 (L-M)", b:[42,"Box of 100",2], u:"BOX", p:100, x:["Castile Soap Towelettes"], v:"McKesson", vi:"120257", syn:["castile","castille","soap towelette","moist towelette","towelettes"], slip:1, vu:{BX:100,CS:1000}, vn:["D41900"]},
-  {id:"GEN-COBAN", n:"Coban Wrap", s:"General Supplies", l:"R6B4S1234", u:"PK/30", p:30, of:"GeneralSupplies_CobanWrap30pk", op:30, x:["Coban Wrap"], v:"McKesson", syn:["coban","self adherent wrap"], slip:1, vn:["1032956","16-53121","PRM088001CP"]},
-  {id:"SHP-ICEPACK", n:"Ice Packs", s:"General Supplies", l:"R2B2S34", b:[100,"Each",3], u:"PK/10", p:10, of:"ShippingMaterials_IcePacks10pk", op:10, x:["Ice Packs"], syn:["ice pack","cold pack"], slip:1, vu:{CS:50}},
-  {id:"GEN-TOILETFIT", n:"Hat - Collection Container (Toilet-Fit)", s:"General Supplies", l:"R4B4S1234", b:[100,"Each",12], u:"PK/50", p:50, of:"GeneralSupplies_DisposableSpecimenCollectionContainerToiletFit50pk", op:50, x:["Specimen Collection Container (Toilet-Fit)","Hat - Collection Container (Toilet-Fit)"], v:"McKesson", syn:["urine hat","toilet fit","toilet hat","commode","specimen collection container","hats"], slip:1, vn:["B0D4M8TG8Z","487960","16-9522"], vu:{CS:100}},
+  {id:"GEN-COBAN", n:"Coban Wrap", s:"General Supplies", l:"R6B4S1234", b:[null,"Pack of 30",12,252], u:"PK/30", p:30, of:"GeneralSupplies_CobanWrap30pk", op:30, x:["Coban Wrap"], v:"McKesson", syn:["coban","self adherent wrap"], slip:1, vn:["1032956","16-53121","PRM088001CP"]},
+  {id:"SHP-ICEPACK", n:"Ice Packs", s:"General Supplies", l:"R2B2S34", b:[[100,"Each",3],[null,"Case of 50",3,8]], u:"PK/10", p:10, of:"ShippingMaterials_IcePacks10pk", op:10, x:["Ice Packs"], syn:["ice pack","cold pack"], slip:1, vu:{CS:50}},
+  {id:"GEN-TOILETFIT", n:"Hat - Collection Container (Toilet-Fit)", s:"General Supplies", l:"R4B4S1234", b:[null,"Case of 100",12,14], u:"PK/50", p:50, of:"GeneralSupplies_DisposableSpecimenCollectionContainerToiletFit50pk", op:50, x:["Specimen Collection Container (Toilet-Fit)","Hat - Collection Container (Toilet-Fit)"], v:"McKesson", syn:["urine hat","toilet fit","toilet hat","commode","specimen collection container","hats"], slip:1, vn:["B0D4M8TG8Z","487960","16-9522"], vu:{CS:100}},
   {id:"GEN-GAUZE", n:"Gauze Packs", s:"General Supplies", l:"R7B3S123", b:[80,"Pack of 200",9], u:"PK/200", p:200, of:"GeneralSupplies_Gauze200pk", op:200, x:["Gauze","Gauze Packs"], v:"McKesson", syn:["gauze"], slip:1, vn:["446029","22122000","22-362-178"], vu:{PK:200,CS:8000}},
   {id:"GEN-COURIERBAG", n:"Large Courier Bags", s:"General Supplies", l:"R2B4S4", b:[2000,"Each",3], u:"PK/30", p:30, of:"GeneralSupplies_LargeCourierBags30pk", op:30, x:["Large Courier Bags"], syn:["courier bag","large courier"], slip:1, vu:{CS:1000}},
-  {id:"GEN-PUPPYPAD", n:"Puppy Pads", s:"General Supplies", l:"R3B4S4", u:"PACK", p:1, x:["Puppy Pads"], v:"Amazon", vi:"B0CPPLFQKB", syn:["puppy pad","chux","underpad"], slip:1, vu:{CS:100}, sn:"00630130885101"},
-  {id:"GEN-SHARPSCON", n:"Sharps Container - Unused", s:"General Supplies", l:"R8B1S1234", b:[10,"Each",12], u:"EACH", p:1, of:"GeneralSupplies_SharpsContainer1pk", op:1, x:["Sharps Container","Sharps Container - Unused"], v:"McKesson", syn:["sharps"], slip:1, vn:["881399"], vu:{BX:10,CS:20}},
+  {id:"GEN-PUPPYPAD", n:"Puppy Pads", s:"General Supplies", l:"R3B4S4", b:[null,"Pack",3,8], u:"PACK", p:1, x:["Puppy Pads"], v:"Amazon", vi:"B0CPPLFQKB", syn:["puppy pad","chux","underpad"], slip:1, vu:{CS:100}, sn:"00630130885101"},
+  {id:"GEN-SHARPSCON", n:"Sharps Container - Unused", s:"General Supplies", l:"R8B1S1234", b:[null,"Box of 10",12,20], u:"EACH", p:1, of:"GeneralSupplies_SharpsContainer1pk", op:1, x:["Sharps Container","Sharps Container - Unused"], v:"McKesson", syn:["sharps"], slip:1, vn:["881399"], vu:{BX:10,CS:20}},
   {id:"GEN-TOURNIQUET", n:"Tourniquets", s:"General Supplies", l:"R7B2S1234", b:[24,"Bag of 100",12], u:"PK/100", p:100, of:"GeneralSupplies_Tourniquets100pk", op:100, x:["Tourniquets"], syn:["tourniquet"], slip:1, vn:["DYND75020CS","DYND75020"], vu:{CS:1200}},
   {id:"GEN-ZEBRAROLL", n:"Zebra Printer Label Rolls", s:"General Supplies", l:"Mid", u:"ROLL", p:1, of:"GeneralSupplies_ZebraPrinterLabelRoll500pk", op:1, x:["Zebra Printer Label Roll","Zebra Printer Label Rolls"], syn:["zebra roll","label roll","zebra label","zebra"], slip:1},
   {id:"GEN-DISINFWIPE", n:"Disinfectant Wipes - Pack", s:"General Supplies", l:"R2B3S1 (L-M)", b:[24,"Tub",2], u:"TUB", p:1, x:["CaviWipes","Disinfectant Wipes - Pack"], v:"McKesson", vi:"455706", syn:["cavi wipe","caviwipe","cavi wipes","disinfectant wipe","sani wipe","sanicloth"], slip:1, vn:["1190688","14-1100","13-1100"], vu:{CS:12}, sn:"00615375008768"},
@@ -644,11 +646,11 @@ var CATALOG = [
   {id:"GEN-LYSOL", n:"Lysol Spray", s:"General Supplies", l:"R2B2S2 (M)", b:[35,"Can",1], u:"CAN", p:1, syn:["lysol"], slip:1},
 
   // ---------------- PPE ----------------
-  {id:"PPE-GLOVE-L", n:"Gloves - Large Box", s:"PPE", l:"R8B2S3", u:"BOX", p:200, x:["Gloves - Large"], v:"McKesson", vi:"14-6978C", syn:["large glove","glove large","lg glove","gloves l"], no:["extra","xl","x large"], slip:1, vn:["765876","14-6978C"], vu:{BX:200,CS:2000}, sn:"00612479181663"},
-  {id:"PPE-GLOVE-M", n:"Gloves - Medium Box", s:"PPE", l:"R8B2S2", u:"BOX", p:200, x:["Gloves - Medium"], v:"McKesson", vi:"SemSmnr203", syn:["medium glove","glove medium","med glove","gloves m"], slip:1, vu:{BX:200,CS:2000}, vn:["765875","14-6976C"], sn:"00612479181649"},
-  {id:"PPE-GLOVE-S", n:"Gloves - Small Box", s:"PPE", l:"R8B2S1", u:"BOX", p:200, x:["Gloves - Small"], v:"McKesson", vi:"SemSmnr202", syn:["small glove","glove small","sm glove","gloves s"], no:["extra","xs","x small"], slip:1, vu:{BX:200,CS:2000}, vn:["765874","14-6974C"], sn:"00612479181625"},
-  {id:"PPE-GLOVE-XS", n:"Gloves - Extra Small Box", s:"PPE", l:"R8B2S4", u:"BOX", p:200, x:["Gloves - Extra Small"], syn:["extra small glove","xs glove","x small glove","gloves xs","glove xs"], slip:0, vu:{BX:200}},
-  {id:"PPE-GLOVE-XL", n:"Gloves - Extra Large Box", s:"PPE", l:"R8B2S4", u:"BOX", p:200, x:["Gloves - Extra Large"], syn:["extra large glove","xl glove","x large glove","gloves xl","glove xl"], slip:0, vu:{BX:200}},
+  {id:"PPE-GLOVE-L", n:"Gloves - Large Box", s:"PPE", l:"R8B2S3", b:[null,"Box of 200",3,112], u:"BOX", p:200, x:["Gloves - Large"], v:"McKesson", vi:"14-6978C", syn:["large glove","glove large","lg glove","gloves l"], no:["extra","xl","x large"], slip:1, vn:["765876","14-6978C"], vu:{BX:200,CS:2000}, sn:"00612479181663"},
+  {id:"PPE-GLOVE-M", n:"Gloves - Medium Box", s:"PPE", l:"R8B2S2", b:[null,"Box of 200",3,112], u:"BOX", p:200, x:["Gloves - Medium"], v:"McKesson", vi:"SemSmnr203", syn:["medium glove","glove medium","med glove","gloves m"], slip:1, vu:{BX:200,CS:2000}, vn:["765875","14-6976C"], sn:"00612479181649"},
+  {id:"PPE-GLOVE-S", n:"Gloves - Small Box", s:"PPE", l:"R8B2S1", b:[null,"Box of 200",3,112], u:"BOX", p:200, x:["Gloves - Small"], v:"McKesson", vi:"SemSmnr202", syn:["small glove","glove small","sm glove","gloves s"], no:["extra","xs","x small"], slip:1, vu:{BX:200,CS:2000}, vn:["765874","14-6974C"], sn:"00612479181625"},
+  {id:"PPE-GLOVE-XS", n:"Gloves - Extra Small Box", s:"PPE", l:"R8B2S4", b:[null,"Box of 200",3,110], u:"BOX", p:200, x:["Gloves - Extra Small"], syn:["extra small glove","xs glove","x small glove","gloves xs","glove xs"], slip:0, vu:{BX:200}},
+  {id:"PPE-GLOVE-XL", n:"Gloves - Extra Large Box", s:"PPE", l:"R8B2S4", b:[null,"Box of 200",3,110], u:"BOX", p:200, x:["Gloves - Extra Large"], syn:["extra large glove","xl glove","x large glove","gloves xl","glove xl"], slip:0, vu:{BX:200}},
   {id:"PPE-MASK", n:"Face Masks - Box", s:"PPE", l:"Back", u:"BOX", p:50, x:["Face Masks"], syn:["face mask","mask"], slip:1, cf:1, vu:{BX:50}},
 
   // ---------------- Not on the paper slip: order-form and warehouse items ----------------
@@ -666,7 +668,7 @@ var CATALOG = [
   {id:"OFF-SHARPIE-L", n:"Sharpies - Large (King Size)", s:"Facility / Office", l:"R2B2S1 (L)", u:"EACH", p:1, x:["Sharpies - Large (King Size)"], v:"Amazon", vi:"B00006IFGP", syn:["big sharpie","large sharpie","king size sharpie","king sharpie"], slip:0},
   {id:"OFF-SHARPIE-S", n:"Sharpies - Small (Fine Point)", s:"Facility / Office", l:"R2B2S1 (L)", u:"EACH", p:1, x:["Sharpies - Small (Fine Point)"], v:"Amazon", vi:"B00G4CJ8GK", syn:["small sharpie","fine point sharpie","fine sharpie"], slip:0},
   {id:"OFF-STICKY", n:"Sticky Notes", s:"Facility / Office", l:"R2B2S1 (L)", u:"EACH", p:1, x:["Sticky Notes"], v:"Amazon", vi:"2095545", syn:["sticky note","post it"], slip:0},
-  {id:"OFF-WATER", n:"Water Bottles", s:"Facility / Office", l:"R7B1S34", u:"CASE", p:1, x:["Water Bottles"], v:"Amazon", vi:"B00091S3K4", syn:["water"], slip:0, cf:1, sn:"00068274432279"}
+  {id:"OFF-WATER", n:"Water Bottles", s:"Facility / Office", l:"R7B1S34", b:[null,"Case",6,24], u:"CASE", p:1, x:["Water Bottles"], v:"Amazon", vi:"B00091S3K4", syn:["water"], slip:0, cf:1, sn:"00068274432279"}
 ];
 
 var SECTIONS = ["Swabs and Cultures","Cups and Containers","Kits and Media","POC/Waived Testing","Tubes","Needles and Holders","General Supplies","PPE","Other Supplies","Facility / Office"];
@@ -2141,7 +2143,11 @@ var CORE = (function () {
        "Box of 100", "Bag of 50", "Pack of 200" ... = that many pieces;  "Each" = 1;
        one thing (Bottle, Can, Tub, Kit, Jug, Vial, Roll, Tube, Cup) = 1 piece;
        a plain Box / Bag / Pack / Case = one of the item's own unit when the item is sold in it (Boxed Tissue: BOX);
-       ", small bin" only says the bin is a small one. Blank, "Small bin" alone or anything else: unknown, so no capacity. */
+       ", small bin" only says the bin is a small one. Blank, "Small bin" alone or anything else: unknown, so no capacity.
+     The most a spot holds (6 Oct, Jackson's "Boxed Inventory on Shelves"; John: what the shelf's bins hold with only that item
+     in them): [null, bin unit, bins, total] = those bins hold `total` (in the bin unit) in all, with no per-bin number. An item
+     kept two ways has a list: [[100,"Each",3],[null,"Case of 50",3,8]] = 3 bins of 100 loose + 3 bins holding 8 cases of 50.
+     The Full bins helper counts only bins with a per-bin number. */
   var BIN_OF = /^(box|bag|pack|case|carton|sleeve|tub|bottle|kit|roll)(?:e?s)?\s+of\s+(\d+(?:\.\d+)?)$/;
   var BIN_ONE = /^(bottle|can|tub|kit|jug|vial|roll|tube|cup)s?$/;
   function binUnit(unit, it) {
@@ -2158,21 +2164,40 @@ var CORE = (function () {
     return null;
   }
   function binWord(noun, n) { return noun === "each" ? "each" : n === 1 ? noun : noun === "box" ? "boxes" : noun + "s"; }
-  // null, or { per, bins, unit, each (pieces in one bin unit), binEach (pieces in one full bin), capEach (all the bins, pieces),
-  //   cap (all the bins, in the bin unit), perText "15 packs" (one full bin), text "180 packs (12 bins × 15)" }
-  function binInfo(it) {
-    var b = it && it.b; if (!b || !b.length) return null;
-    var per = num(b[0]), bins = num(b[2]);
-    if (!(per > 0 && bins > 0)) return null;
-    var bu = binUnit(b[1], it); if (!bu) return null;
-    var cap = round(per * bins, 3), of = bu.of && bu.of !== (it.p || 1) ? " of " + fmtN(bu.of) : "";
+  // b is one group [per bin, bin unit, bins(, total)] or a list of groups (an item kept two ways, 6 Oct)
+  function binGroups(b) { return !b || !b.length ? [] : Array.isArray(b[0]) ? b : [b]; }
+  // one group -> null (no bins, no per-bin number and no total, or a bin unit that isn't clear) or
+  //   { per (null where Jackson gave the spot's total), bins, unit, bu, noun, of, cap (in the bin unit), capEach (pieces) }
+  function binGroup(g, it) {
+    if (!g || !g.length) return null;
+    var per = num(g[0]), bins = num(g[2]), tot = g[3] != null && g[3] !== "" ? num(g[3]) : 0;
+    if (!(bins > 0) || !(per > 0 || tot > 0)) return null;
+    var bu = binUnit(g[1], it); if (!bu) return null;
+    var cap = tot > 0 ? tot : round(per * bins, 3), of = bu.of && bu.of !== (it.p || 1) ? " of " + fmtN(bu.of) : "";
     // Jackson's bin unit is the item's own pack ("Box of 100" for a PK/100 tube): say it in the item's word, the one the Stock
     // page uses ("15 packs a bin", "135 packs (9 bins × 15)"); "boxes" stays where the item's own unit is a box (Cowork, 5 Oct)
     var noun = bu.noun;
     if (bu.of && bu.of === (it.p || 1) && it.u && it.u !== "EACH" && unitWord(it, 1) !== "each") noun = unitWord(it, 1);
-    var bi = { per: per, bins: bins, unit: clean(b[1]), each: bu.each, binEach: round(per * bu.each, 3), capEach: round(cap * bu.each, 3), cap: cap, small: bu.small, noun: noun, of: of };
-    bi.perText = binText(bi, per);
-    bi.text = binText(bi, cap) + " (" + fmtN(bins) + " " + (bu.small ? "small " : "") + (bins === 1 ? "bin" : "bins") + " × " + fmtN(per) + ")";
+    return { per: tot > 0 ? null : per, bins: bins, unit: clean(g[1]), bu: bu, noun: noun, of: of, cap: cap, capEach: round(cap * bu.each, 3) };
+  }
+  function binsWord(g) { return fmtN(g.bins) + " " + (g.bu.small ? "small " : "") + (g.bins === 1 ? "bin" : "bins"); }
+  // null, or { per, bins, unit, each (pieces in one bin unit), binEach (pieces in one full bin), capEach (all the bins, pieces),
+  //   cap (all the bins, in the bin unit), perText "15 packs" (one full bin), text "180 packs (12 bins × 15)", count, allBins }
+  // per / bins / binEach / perText are the bins with a per-bin number, the ones the Full bins helper counts (count = true).
+  // 6 Oct: a spot's total alone: per null, count false, bins = all its bins, "112 boxes (3 bins)"; an item kept two ways:
+  // "1,100 kits (3 bins × 100 + 8 boxes of 100)", the helper on the 3 bins of 100
+  function binInfo(it) {
+    var gs = binGroups(it && it.b).map(function (g) { return binGroup(g, it); });
+    if (!gs.length || gs.some(function (g) { return !g; })) return null;
+    var pg = gs.filter(function (g) { return g.per != null; })[0], lead = pg || gs[0];
+    var capEach = round(gs.reduce(function (s, g) { return s + g.capEach; }, 0), 3), allBins = gs.reduce(function (s, g) { return s + g.bins; }, 0);
+    var cap = round(capEach / lead.bu.each, 3);
+    var bi = { per: pg ? pg.per : null, bins: pg ? pg.bins : allBins, allBins: allBins, unit: lead.unit, each: lead.bu.each,
+      binEach: pg ? round(pg.per * pg.bu.each, 3) : null, capEach: capEach, cap: cap, small: lead.bu.small, noun: lead.noun, of: lead.of, count: !!pg };
+    bi.perText = pg ? binText(pg, pg.per) : "";
+    bi.text = (Math.abs(cap - Math.round(cap)) < 1e-9 ? binText(lead, cap) : fmtN(capEach) + " ea") + " (" + gs.map(function (g) {
+      return g.per != null ? binsWord(g) + " × " + fmtN(g.per) : gs.length > 1 ? binText(g, g.cap) : binsWord(g);
+    }).join(" + ") + ")";
     return bi;
   }
   // n of the bin unit in words: "45 boxes", "45 boxes of 100", "1,000 each"
@@ -2187,7 +2212,7 @@ var CORE = (function () {
     units = num(units); loose = num(loose);
     var restEach = round(units * p + loose, 3);
     full = Math.floor(num(full));
-    if (!bi || !(full > 0)) return { each: restEach, full: 0, binsEach: 0, text: "" };
+    if (!bi || !bi.count || !(full > 0)) return { each: restEach, full: 0, binsEach: 0, text: "" };   // count: bins with a per-bin number
     full = Math.min(full, Math.floor(bi.bins));
     var binsEach = round(full * bi.binEach, 3), each = round(binsEach + restEach, 3);
     var lead = fmtN(full) + (full === 1 ? " full bin × " : " full bins × ");
@@ -2226,6 +2251,19 @@ var CORE = (function () {
     return { pct: pct, full: false, text: pct + "% full", over: "" };
   }
 
+  // the bin columns (count template, workbook): Per Bin, Bin Unit, Bins, Full Capacity (in the Bin Unit). A per-bin count: Full
+  // Capacity = Per Bin × Bins; a spot's most (6 Oct): no Per Bin, Full Capacity = Jackson's figure; an item kept two ways: no Per
+  // Bin (its bins aren't alike), all its bins, the whole capacity in the first kind's unit
+  function binCols(it) {
+    var gs = binGroups(it && it.b), v = function (x) { return x != null && x !== "" ? num(x) : null; };
+    if (!gs.length) return [null, null, null, null];
+    if (gs.length === 1) {
+      var g = gs[0], per = v(g[0]), bins = v(g[2]), tot = v(g[3]);
+      return tot ? [null, clean(g[1]) || null, bins, tot] : [per, clean(g[1]) || null, bins, per != null && bins != null ? round(per * bins, 3) : null];
+    }
+    var bi = binInfo(it);
+    return [null, bi ? bi.unit : clean(gs[0][1]) || null, gs.reduce(function (s, x) { return s + num(x[2]); }, 0), bi ? bi.cap : null];
+  }
   /* the count template (Stock -> Excel -> Count template): one row per item in pick order, what the app shows now, Jackson's
      bin columns like the count workbook, blank count columns (Qty Counted and Top Shelf (S0) in the Unit, Loose Each in pieces)
      and the expiration dates on file. stockItems = computeStock(...).items, exp = expiryState(...) */
@@ -2234,9 +2272,8 @@ var CORE = (function () {
   function templateRows(cat, stockItems, exp, zones) {
     stockItems = stockItems || {}; exp = exp || {};
     return pickSort(cat.list.filter(function (it) { return !it.off; }).map(function (it) { return { id: it.id }; }), cat, zones || DEFAULT_ZONES).map(function (x) {
-      var it = cat.byId[x.id], r = stockItems[it.id] || {}, d = exp[it.id] || [], b = it.b || [];
-      var per = b[0] != null && b[0] !== "" ? num(b[0]) : null, bins = b[2] != null && b[2] !== "" ? num(b[2]) : null;
-      return [it.l || "", it.id, it.n, it.u, it.p || 1, per, clean(b[1]) || null, bins, per != null && bins != null ? round(per * bins, 3) : null,
+      var it = cat.byId[x.id], r = stockItems[it.id] || {}, d = exp[it.id] || [], bc = binCols(it);
+      return [it.l || "", it.id, it.n, it.u, it.p || 1, bc[0], bc[1], bc[2], bc[3],
         r.onHand == null || r.stale ? null : round(r.onHand, 3), null, null, null, d.map(fmtDate).join(", "), ""];
     });
   }
@@ -2956,7 +2993,7 @@ var CORE = (function () {
     expDate: expDate, expDates: expDates, onHandBefore: onHandBefore, addMonths: addMonths, daysBetween: daysBetween, expStatus: expStatus, readExp: readExp, expData: expData, expiryState: expiryState, uniqDates: uniqDates,
     countHeader: countHeader, readCountSheets: readCountSheets, countPlan: countPlan,
     ID_ALIAS: ID_ALIAS, ALIAS_P: ALIAS_P, aliasId: aliasId, aliasSlipLine: aliasSlipLine, aliasSlip: aliasSlip, aliasLog: aliasLog, aliasOverrides: aliasOverrides,
-    binUnit: binUnit, binInfo: binInfo, binText: binText, binCount: binCount, binFull: binFull, binFullText: binFullText, TEMPLATE_HEAD: TEMPLATE_HEAD, templateRows: templateRows,
+    binUnit: binUnit, binGroups: binGroups, binInfo: binInfo, binCols: binCols, binText: binText, binCount: binCount, binFull: binFull, binFullText: binFullText, TEMPLATE_HEAD: TEMPLATE_HEAD, templateRows: templateRows,
     parseSlipScan: parseSlipScan, scanReceive: scanReceive, packWords: packWords, slipColumns: slipColumns, slipQty: slipQty, vendorIndex: vendorIndex, vendorHit: vendorHit, UOM_WORD: UOM_WORD
   };
 })();
@@ -3181,7 +3218,7 @@ var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focu
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.2 · 6 Oct 2026";
+var VERSION = "1.3 · 6 Oct 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -4804,7 +4841,8 @@ ACT.itemSheet = function (el) {
 };
 
 // "Bin capacity 180 packs (12 bins × 15) · 62% full" (Jackson's bin counts, 2 Oct); never over 100%: "· Full · 3 packs of 100
-// more than the bins hold" (Cowork, 5 Oct); nothing where the bin unit isn't clear
+// more than the bins hold" (Cowork, 5 Oct); nothing where the bin unit isn't clear. The most a spot holds (6 Oct): "Bin
+// capacity 112 boxes (3 bins)", "1,100 kits (3 bins × 100 + 8 boxes of 100)"
 function binLine(it, r) {
   var bi = C.binInfo(it); if (!bi) return "";
   var full = r && !r.stale ? C.binFullText(it, r.onHand) : null;
@@ -4945,7 +4983,7 @@ function cntOneResults(q) {
 IN.cntOneQ = function (el) { var box = $("#cntOneRes"); if (box) box.innerHTML = cntOneResults(el.value); };
 ACT.countOne = function (el) {
   var id = el.getAttribute("data-id"), it = itemOf(id); if (!it) return;
-  var a = appShows(it, stock().items[id] || {}), hasBins = !!C.binInfo(it), v = CNT1 && CNT1.id === id ? CNT1.v : {};
+  var a = appShows(it, stock().items[id] || {}), hasBins = !!(C.binInfo(it) || {}).count, v = CNT1 && CNT1.id === id ? CNT1.v : {};
   openSheet("Count: " + it.n, '<div class="row" style="gap:8px">' + locChip(it.l) + '<span class="pill">' + esc(C.unitLabel(it)) + "</span></div>" +
     (it.l ? '<p class="locfull" style="margin:0">' + esc(C.locSpell(it.l)) + (C.binInfo(it) ? " · bin capacity " + esc(C.binInfo(it).text) : "") + "</p>" : "") +
     '<p class="muted" style="margin:0">Count everything on the shelf' + (hasBins ? ": pick how many bins are full, then count the rest." : ".") + " The app figure is replaced by what you enter.</p>" +
@@ -5048,7 +5086,7 @@ function spotDone(sp) { return sp.ids.every(function (id) { return countEach(id)
 var BH_HOOK = {};
 function binHelper(it, key, full, o) {
   o = o || {};
-  var bi = C.binInfo(it); if (!bi) return "";
+  var bi = C.binInfo(it); if (!bi || !bi.count) return "";   // only bins with a per-bin number (a spot's most alone, 6 Oct: no helper)
   var rest = o.rest || "", hook = o.hook || "", inSheet = !!o.sheet, now = o.now || [];
   var max = Math.floor(bi.bins), b = Math.min(max, Number(full) > 0 ? Math.floor(Number(full)) : 0);
   return '<div class="binhelp" id="' + key + '-box" data-id="' + esc(it.id) + '" data-max="' + max + '" data-rest="' + esc(rest || "") + '" data-top="' + esc(o.top || "") + '" data-hook="' + esc(hook || "") + '">' +

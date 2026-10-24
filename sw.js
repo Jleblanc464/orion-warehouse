@@ -1,15 +1,18 @@
 /* Orion Warehouse — lets the app open with no connection, and quickly on slow Wi-Fi.
    Pages load fresh when the whole page arrives within 3 seconds; otherwise the copy saved on the device opens and the
-   fresh one is saved for next time. Cognito calls are never cached. */
-var CACHE = "orion-warehouse-v1";
-var FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-512.png"];
+   fresh one is saved for next time. Cognito calls are never cached.
+   Updates (8.4): build.js writes the version and the file list below; a new worker installs and waits until the app tells
+   it to take over (when nothing is waiting to upload and no count is open). */
+var VERSION = "db5391c851";
+var FILES = ["./","./index.html","./barcode-polyfill.js","./icon-180.png","./icon-512.png","./manifest.webmanifest","./zxing_reader.wasm"];
+var CACHE = "orion-warehouse-" + VERSION;
 var WAIT_MS = 3000;
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
     return Promise.all(FILES.map(function (u) { return fetch(u, { cache: "no-store" }).then(function (r) { if (r.ok) return c.put(u, r); }).catch(function () {}); }));
   }));
-  self.skipWaiting();
 });
+self.addEventListener("message", function (e) { if (e.data && e.data.type === "skip") self.skipWaiting(); });
 self.addEventListener("activate", function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
     return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
@@ -17,7 +20,7 @@ self.addEventListener("activate", function (e) {
 });
 self.addEventListener("fetch", function (e) {
   var req = e.request, url = new URL(req.url);
-  if (req.method !== "GET" || url.origin !== self.location.origin) return;
+  if (req.method !== "GET" || url.origin !== self.location.origin || /\/version\.json$/.test(url.pathname)) return;
   // a fresh copy (fetched by URL: a navigation request can't be re-used with options), read to the end before it is used,
   // so a download that starts and then crawls, stalls or breaks off counts as slow too
   var fresh = fetch(new Request(req.url, { cache: "no-store", credentials: "same-origin" })).then(function (r) {

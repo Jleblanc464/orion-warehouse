@@ -3,7 +3,7 @@
    fresh one is saved for next time. Cognito calls are never cached.
    Updates (8.4): build.js writes the version and the file list below; a new worker installs and waits until the app tells
    it to take over (when nothing is waiting to upload and no count is open). */
-var VERSION = "db5391c851";
+var VERSION = "0e275d7055";
 var FILES = ["./","./index.html","./barcode-polyfill.js","./icon-180.png","./icon-512.png","./manifest.webmanifest","./zxing_reader.wasm"];
 var CACHE = "orion-warehouse-" + VERSION;
 var WAIT_MS = 3000;

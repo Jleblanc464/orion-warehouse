@@ -619,7 +619,10 @@ main.hastabs:has(.ds-scan.up){padding-bottom:calc(var(--foot-h) + var(--sp-4) + 
 .ds-tab{position:relative}
 .ds-tab .n{position:absolute;top:4px;left:calc(50% + 8px)}
 .ds-tab .n.dot{left:calc(50% + 12px)}   /* 4.1: the dot sits clear of the icon's edge (review 4.1) */
-.banner.held .held-ic{display:inline-flex;color:var(--warn);flex:none}.banner.held .held-ic svg{width:16px;height:16px}   /* 4.1: the warning's shape beside its words, not colour alone */
+.banner.held{align-items:flex-start}.banner.held .held-ic{display:inline-flex;color:var(--warn);flex:none;margin-top:2px}.banner.held .held-ic svg{width:16px;height:16px}.banner.held .btn{align-self:center}
+.banner.held .heldfacts{font-size:var(--fs-15);color:var(--ink-3)}.banner.held .heldfacts span{white-space:nowrap}   /* 4.1b: the facts the tap rests on, at body size under the fact line; a wrap falls only at a dot (design review) */
+.sheet .sb > .btn.ghost{align-self:flex-start}   /* 4.1b: Forgot the PIN under the PIN field */
+.held-line{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-15);color:var(--ink);margin-top:var(--sp-2)}.held-line .held-ic{display:inline-flex;color:var(--warn);flex:none}.held-line .held-ic svg{width:16px;height:16px}   /* 4.1b: the station's held line, the band's shape without its tint */   /* 4.1: the warning's shape beside its words, not colour alone */
 .ds-tab .n.z{background:var(--sunk);color:var(--ink-3)}
 .ds-tab .n.warn{background:var(--warn);color:var(--warn-ink)}
 .panes{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:var(--sp-4);align-items:start}
@@ -1582,6 +1585,7 @@ var CORE = (function () {
   // Task 3.2: on hand (pieces) under the item's minimum; not counted or no minimum = not below
   function belowMin(it, each) { return !!(it && it.min > 0 && each != null && each < it.min); }
   function buildCatalog(settings, map) {   // map: the GTIN map (data/gtin_map.json, inlined by build.js), may be null
+    if (map) GTIN_BASE_MAP = map;   // 4.1c: the settings guard's built-in code owners
     var ov = (settings && settings.items && settings.items.ov) || {};
     var added = (settings && settings.items && settings.items.add) || [];
     var list = applyOverrides(CAT, ov);
@@ -2864,31 +2868,105 @@ var CORE = (function () {
     zones: DEFAULT_ZONES.slice(), vendors: ["McKesson", "Fisher Healthcare", "Labcorp", "Amazon", "Other"], items: { ov: {}, add: [], gtin: {} }, orderForm: 1 };
   // 3.4: the look-alike pairs (an item in one asks for a scan before its pack line ticks); Jackson changes the list on Settings
   SETTINGS_DEFAULTS.pairs = [["COL-GRAY-NAF", "COL-GRAY-URINE"], ["COL-RBLUE-PLAIN", "COL-RBLUE-EDTA"], ["COL-BFLY-21", "COL-BFLY-23"], ["COL-GRN-LIHEP", "COL-GRN-NAHEP"], ["COL-PARAPAK-G", "COL-PARAPAK-P"]];
-  var SETTINGS_KEYS = ["copies", "autoPrintHours", "fastFrom", "fastTo", "fastDays", "zones", "vendors", "labels", "labelDpi", "siteEmail", "orderForm", "labForm", "labPinHash", "labPinSetBy", "labov", "pairs"];
+  var SETTINGS_KEYS = ["copies", "autoPrintHours", "fastFrom", "fastTo", "fastDays", "zones", "vendors", "labels", "labelDpi", "siteEmail", "orderForm", "labForm", "labPinHash", "labPinSetBy", "labResetHash", "labov", "pairs"];   // labResetHash (4.1b): the reset code set with the first PIN
   // 4.1 the settings guard: why a newer form-32 entry should not replace the settings an iPad keeps ([] = take it). cur is the
   // normalized settings kept (null: nothing kept, when only incomplete and notApp count), next the normalized entry, raw the entry.
   // incomplete: the status; notApp: no req tag in SettingsData or no UpdatedBy (every app save has both); pin / labForm: the kept
   // PIN hash or lab form removed or changed; orderForm: 1 <-> 33; the overrides, the added items or the lab overrides: 5 or more,
   // or over half, removed; packers: none left on the form; ordersStart: a jump of more than 500
-  function settingsRisk(cur, next, raw) {
+  // 4.1b (the 16:58 review): the checks see changes as well as removals, and removals are judged against the kept settings and
+  // against the iPad's last own save and the read's starting point (bases), so a change in steps never passes. New codes: gtin (a
+  // taught code moved to another item), pairs (a look-alike pair removed), siteEmail, items (p / u / off changed on 5 or more
+  // overrides); pin now covers a hash or a PIN device that appears or changes, and ordersStart a lowered number.
+  var RISK_DROPPED = function (a, b) { return Object.keys(a || {}).filter(function (k) { return !(b || {})[k]; }).length; };
+  var RISK_MANY = function (n, of) { return n >= 5 || (of >= 2 && n * 2 > of); };
+  function gtinOwners(set) { var o = {}, g, k, ig = (set && set.items && set.items.gtin) || {}, lv = (set && set.labov) || {}; for (g in ig) if (ig[g]) o[g] = "i:" + ig[g]; for (k in lv) ((lv[k] && lv[k].gtin) || []).forEach(function (c) { o[c] = "l:" + k; }); return o; }
+  // 4.1c: the codes the catalog and the GTIN map give an item own it too, so a taught code that takes one of them for another item
+  // is a move; GTIN_BASE_MAP is the map buildCatalog last saw (null in node: the catalog's own codes still count)
+  var GTIN_BASE_MAP = null;
+  function gtinBase() { var o = {}, g, e, c, add = function (code, owner) { var k = gtin14(code); if (k) (o[k] = o[k] || []).push(owner); };
+    CAT.forEach(function (it) { [].concat(it.gtin || []).forEach(function (x) { add(x, "i:" + it.id); }); if (it.sn) add(it.sn, "i:" + it.id); });
+    var codes = (GTIN_BASE_MAP && GTIN_BASE_MAP.codes) || {}; for (g in codes) { e = codes[g] || {}; if (e.id) add(g, "i:" + e.id); if (e.key) add(g, "l:" + e.key); }   // a code on both catalogs is owned by both
+    return o; }
+  function gtinMoved(cur, next) { var a = gtinOwners(cur), b = gtinOwners(next), base = gtinBase(), n = 0, g; for (g in a) if (b[g] && b[g] !== a[g]) n++;
+    for (g in b) if (!a[g] && base[g] && base[g].indexOf(b[g]) < 0) n++;   // a built-in code taught to another item
+    return n; }
+  function pairKey(p) { return [].concat(p || []).slice().sort().join("|"); }
+  function pairsGone(cur, next) { var have = {}; (next.pairs || []).forEach(function (p) { have[pairKey(p)] = 1; }); return (cur.pairs || []).filter(function (p) { return !have[pairKey(p)]; }).length; }
+  function ovVal(o, k) { return o[k] == null ? null : o[k]; }
+  function labovValues(o) { var c = {}; Object.keys(o || {}).sort().forEach(function (k) { if (k !== "gtin") c[k] = o[k]; }); return JSON.stringify(c); }   // gtin is gtinMoved's
+  function itemsChanged(cur, next) { var a = (cur.items && cur.items.ov) || {}, b = (next.items && next.items.ov) || {}, n = 0, id, K = ["p", "u", "off"];
+    for (id in a) { if (!b[id] || !a[id]) continue; if (K.some(function (k) { return ovVal(a[id], k) !== ovVal(b[id], k); })) n++; }
+    for (id in b) { if (a[id] || !b[id]) continue; if (K.some(function (k) { return ovVal(b[id], k) !== null; })) n++; }   // 4.1c: an added override that sets off, p or u
+    var la = cur.labov || {}, lb = next.labov || {}; for (id in la) { if (!la[id] || !lb[id]) continue; if (labovValues(la[id]) !== labovValues(lb[id])) n++; }   // 4.1c: a lab override's values changed in place
+    return n; }
+  function addedGone(c, ni) { var ca = ((c.items || {}).add || []).map(function (x) { return x.id; }), na = (ni.add || []).map(function (x) { return x.id; }); return { gone: ca.filter(function (id) { return na.indexOf(id) < 0; }).length, of: ca.length }; }
+  function settingsRisk(cur, next, raw, bases) {
     var why = [], f = raw ? flatten(raw) : {}, sd = null;
     try { sd = JSON.parse(f.SettingsData || "null"); } catch (x) {}
     if (entryStatus(raw) === "Incomplete") why.push("incomplete");
     if (!sd || !sd.req || !sd.req.dev || !f.UpdatedBy) why.push("notApp");
     if (!cur) return why;
-    var dropped = function (a, b) { return Object.keys(a || {}).filter(function (k) { return !(b || {})[k]; }).length; };
-    var many = function (n, of) { return n >= 5 || (of >= 2 && n * 2 > of); };
-    if (cur.labPinHash && next.labPinHash !== cur.labPinHash) why.push("pin");
+    var all = [cur].concat([].concat(bases || []).filter(Boolean)), ni = next.items || {};
+    var any = function (test) { return all.some(test); };
+    if ((cur.labPinHash || next.labPinHash) && next.labPinHash !== cur.labPinHash) why.push("pin");
+    else if ((cur.labPinSetBy || next.labPinSetBy) && next.labPinSetBy !== cur.labPinSetBy) why.push("pin");
+    if ((cur.labResetHash || next.labResetHash) && next.labResetHash !== cur.labResetHash) why.push("reset");   // the reset code is guarded like the PIN (review r2)
     if (cur.labForm && next.labForm !== cur.labForm) why.push("labForm");
     if (next.orderForm !== cur.orderForm) why.push("orderForm");
-    var ci = cur.items || {}, ni = next.items || {};
-    if (many(dropped(ci.ov, ni.ov), Object.keys(ci.ov || {}).length)) why.push("itemOverrides");
-    var ca = (ci.add || []).map(function (x) { return x.id; }), na = (ni.add || []).map(function (x) { return x.id; }), gone = ca.filter(function (id) { return na.indexOf(id) < 0; }).length;
-    if (gone && many(gone, ca.length)) why.push("addedItems");
-    if (many(dropped(cur.labov, next.labov), Object.keys(cur.labov || {}).length)) why.push("labOverrides");
+    if (any(function (c) { var ci = c.items || {}; return RISK_MANY(RISK_DROPPED(ci.ov, ni.ov), Object.keys(ci.ov || {}).length); })) why.push("itemOverrides");
+    if (any(function (c) { var g = addedGone(c, ni); return g.gone && RISK_MANY(g.gone, g.of); })) why.push("addedItems");
+    if (any(function (c) { return RISK_MANY(RISK_DROPPED(c.labov, next.labov), Object.keys(c.labov || {}).length); })) why.push("labOverrides");
     if (!String(f.Packers || "").trim()) why.push("packers");
-    if (num(next.ordersStart) > num(cur.ordersStart) + 500) why.push("ordersStart");
+    if (any(function (c) { return num(next.ordersStart) > num(c.ordersStart) + 500 || num(next.ordersStart) < num(c.ordersStart); })) why.push("ordersStart");
+    if (any(function (c) { return gtinMoved(c, next) > 0; })) why.push("gtin");
+    if (any(function (c) { var n = (c.pairs || []).length; return n > 0 && pairsGone(c, next) === n; })) why.push("pairs");   // every pair gone, never Jackson's one removal (review r2)
+    if (next.siteEmail === "all" && cur.siteEmail !== "all") why.push("siteEmail");   // the switch that mails every site
+    if (any(function (c) { return itemsChanged(c, next) >= 5; })) why.push("items");
     return why;
+  }
+  // the band's facts (4.1b, review item 10): the reason codes in words, with the counts where there are any
+  var RISK_WORDS = { incomplete: "not finished", notApp: "outside the app", pin: "PIN changed", reset: "reset code changed", labForm: "lab form changed", orderForm: "order form changed", itemOverrides: "item edits removed", addedItems: "added items removed", labOverrides: "lab item edits removed", packers: "no packers", ordersStart: "orders-from number moved", gtin: "a product code moved", pairs: "every look-alike pair removed", siteEmail: "site email set to all", items: "item edits changed" };
+  function settingsFacts(why, cur, next) {
+    var ni = (next && next.items) || {}, ci = (cur && cur.items) || {};
+    var plural = function (n, one) { return n + " " + one + (n === 1 ? "" : "s"); };
+    return (why || []).map(function (w) {
+      if (!cur) return RISK_WORDS[w] || w;
+      if (w === "itemOverrides") return plural(RISK_DROPPED(ci.ov, ni.ov), "item edit") + " removed";
+      if (w === "addedItems") return plural(addedGone(cur, ni).gone, "added item") + " removed";
+      if (w === "labOverrides") return plural(RISK_DROPPED(cur.labov, next.labov), "lab item edit") + " removed";
+      if (w === "items") return plural(itemsChanged(cur, next), "item edit") + " changed";
+      if (w === "pairs") return "every look-alike pair removed";
+      if (w === "gtin") return plural(gtinMoved(cur, next), "product code") + " moved";
+      return RISK_WORDS[w] || w;
+    }).join(" · ");
+  }
+  // 4.1b (review items 1 and 2): a first read (a new device, or after Disconnect) is judged as a chain, oldest first: each entry against
+  // the last clean one; a later clean entry replaces it; the newest risky one left is held. With no app save in the read at all, the
+  // newest complete entry is held, so a public entry is never taken on its own: Use new applies it (no PIN kept yet).
+  // Each app save is judged against the app save before it and against the last one taken; clean against either, it is taken (a
+  // held entry a person accepted with Use new is followed by saves that look like it, so the chain moves on). 6.2 found the cost:
+  // a forgery posted twice is taken the same way on a first read; telling the two apart is John's decision (RUN-REPORT 6.2). An entry from outside the app never moves the chain; the newest one is held when it is the newest of all.
+  function settingsFirstRead(entries) {
+    var list = (entries || []).filter(function (e) { return entryNumber(e) > 0; }).sort(function (a, b) { return entryNumber(a) - entryNumber(b); });
+    var base = null, baseN = null, prevN = null, hold = null, why = [], untagged = null, untaggedN = null, sawTagged = false;
+    list.forEach(function (e) {
+      var n = normalizeSettings(e), w = settingsRisk(baseN, n, e);
+      if (w.indexOf("incomplete") >= 0) return;
+      if (w.indexOf("notApp") >= 0) { if ((!hold || entryNumber(e) > entryNumber(hold)) && (base || !sawTagged)) { hold = e; why = w; } untagged = e; untaggedN = n; return; }   // an outside entry is held when it is the newest, unless an app save is already held (then Use new applies the save, never the outside entry)
+      var wp = prevN ? settingsRisk(prevN, n, e) : [];
+      prevN = n; sawTagged = true;
+      if (!baseN) {   // the first app save: judged against the newest outside entry before it, so a forgery after the live entries is held, not taken (review r2)
+        var wu = untaggedN ? settingsRisk(untaggedN, n, e) : [];
+        if (wu.length) { hold = e; why = wu; return; }
+        base = e; baseN = n; hold = null; why = []; return;
+      }
+      if (!w.length || !wp.length) { base = e; baseN = n; hold = null; why = []; return; }
+      if (!hold || entryNumber(e) > entryNumber(hold)) { hold = e; why = w; }
+    });
+    if (!base && !sawTagged && untagged && (!hold || entryNumber(hold) < entryNumber(untagged))) { hold = untagged; why = settingsRisk(null, normalizeSettings(untagged), untagged); }
+    if (hold && base && entryNumber(hold) < entryNumber(base)) { hold = null; why = []; }   // an older hold is history once a newer app save is taken
+    return { take: base, hold: hold, why: why };
   }
   function normalizeSettings(e) {
     var f = e ? flatten(e) : {};
@@ -2907,6 +2985,13 @@ var CORE = (function () {
     out.pairs = Array.isArray(out.pairs) ? out.pairs.filter(function (p) { return Array.isArray(p) && p.length === 2 && typeof p[0] === "string" && typeof p[1] === "string" && !!p[0] && !!p[1]; }) : JSON.parse(JSON.stringify(SETTINGS_DEFAULTS.pairs));
     out.orderForm = num(out.orderForm) === 33 ? 33 : 1;
     out.labForm = num(out.labForm) > 0 ? String(num(out.labForm)) : "";
+    // 6.2: a malformed entry (anyone can post form 32) made the guard throw and stopped every later sync: the added items are a
+    // list of objects with an id, the lab overrides objects whose gtin is a list of codes, the item overrides an object
+    if (out.items) { out.items.add = Array.isArray(out.items.add) ? out.items.add.filter(function (a) { return a && typeof a === "object" && typeof a.id === "string" && a.id; }) : [];
+      if (!out.items.ov || typeof out.items.ov !== "object" || Array.isArray(out.items.ov)) out.items.ov = {}; }
+    if (out.labov != null) { if (typeof out.labov !== "object" || Array.isArray(out.labov)) out.labov = {}; else Object.keys(out.labov).forEach(function (k) { var o = out.labov[k];
+      if (!o || typeof o !== "object" || Array.isArray(o)) { delete out.labov[k]; return; }
+      if (o.gtin != null) { o.gtin = Array.isArray(o.gtin) ? o.gtin.filter(function (c) { return typeof c === "string" && /^\d{8,14}$/.test(c); }) : []; if (!o.gtin.length) delete o.gtin; } }); }
     return out;
   }
 
@@ -4824,7 +4909,7 @@ var CORE = (function () {
     tokens: tokens, parseQty: parseQty, toSlipUnits: toSlipUnits, parseComments: parseComments,
     slipData: slipData, readSlipData: readSlipData, audit: audit, logData: logData, labData: labData,
     computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
-    parseGS1: parseGS1, gs1Date: gs1Date, gtin14: gtin14, gtinValid: gtinValid, upcEtoA: upcEtoA, scanCode: scanCode, lookAlike: lookAlike, scanNeeded: scanNeeded, isStat: isStat, diffWords: diffWords, markDiff: markDiff, gtinFind: gtinFind, unknownAdd: unknownAdd, unknownRows: unknownRows, UNKNOWN_HEAD: UNKNOWN_HEAD, gtinApply: gtinApply, scanQty: scanQty, teachMerge: teachMerge, teachPending: teachPending,keypadStep: keypadStep, oneDecimal: oneDecimal, updateStep: updateStep,queueRecord: queueRecord, queueItem: queueItem, mergeQueue: mergeQueue, normalizeSettings: normalizeSettings, settingsRisk: settingsRisk, SETTINGS_DEFAULTS: SETTINGS_DEFAULTS,
+    parseGS1: parseGS1, gs1Date: gs1Date, gtin14: gtin14, gtinValid: gtinValid, upcEtoA: upcEtoA, scanCode: scanCode, lookAlike: lookAlike, scanNeeded: scanNeeded, isStat: isStat, settingsFacts: settingsFacts, settingsFirstRead: settingsFirstRead, diffWords: diffWords, markDiff: markDiff, gtinFind: gtinFind, unknownAdd: unknownAdd, unknownRows: unknownRows, UNKNOWN_HEAD: UNKNOWN_HEAD, gtinApply: gtinApply, scanQty: scanQty, teachMerge: teachMerge, teachPending: teachPending,keypadStep: keypadStep, oneDecimal: oneDecimal, updateStep: updateStep,queueRecord: queueRecord, queueItem: queueItem, mergeQueue: mergeQueue, normalizeSettings: normalizeSettings, settingsRisk: settingsRisk, SETTINGS_DEFAULTS: SETTINGS_DEFAULTS,
     slipHTML: slipHTML, SLIP_CSS: SLIP_CSS, fmtDate: fmtDate, addressText: addressText,
     ROSTER: ROST, streetKey: streetKey, orionMail: orionMail, mailTo: mailTo, nameWords: nameWords, nameScore: nameScore, rosterSite: rosterSite,
     ORDER_USUAL: ORDER_USUAL, qtyLimit: qtyLimit, qtyCheck: qtyCheck, qtyHuge: qtyHuge, outOfStock: outOfStock, asOrderedPlan: asOrderedPlan, submitChecks: submitChecks, fillFromCount: fillFromCount, locNorm: locNorm, locWords: locWords, readLocations: readLocations, locIndex: locIndex, shipKey: shipKey, locSuggest: locSuggest, locFind: locFind, locHit: locHit, locSeed: locSeed, locMemoFromSlips: locMemoFromSlips,
@@ -5053,7 +5138,7 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "db5391c851";
+var BUILD = "0e275d7055";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
@@ -5082,6 +5167,8 @@ var S = {
   lsd: LS.get("lsd", ""),     // the department Lab stock shows
   mode: LS.get("mode", "warehouse") === "lab" ? "lab" : "warehouse",   // what this iPad is used for (device only)
   settingsRaw: LS.get("settingsRaw", null),
+  settingsOwn: LS.get("settingsOwn", null),   // 4.1b: this device's last own save; removals and steps are judged against it too
+  settingsSeen: LS.get("settingsSeen", 0),   // 4.1b: the highest entry number decided with Keep current or Use new; it is never held again
   held: LS.get("settingsHeld", null),   // 4.1: a newer form-32 entry the guard would not take ({ raw, why, num }); Settings shows it
   tokens: LS.get("tokens", {}),
   hiOrder: (function (h) { return typeof h === "number" ? { 1: h } : h || {}; })(LS.get("hiOrder", {})),   // per order form: highest entry number seen (Refresh asks for the numbers after it)
@@ -5101,9 +5188,9 @@ Object.keys(S.slips).forEach(function (k) { S.slips[k] = C.aliasSlip(S.slips[k])
 Object.keys(S.logs).forEach(function (k) { S.logs[k] = C.aliasLog(S.logs[k]); });
 var GTM = typeof GTIN_MAP !== "undefined" ? GTIN_MAP : null;   // the GTIN map inlined by build.js (task 3.1)
 // the shared settings, with the codes taught on this iPad that are still waiting to upload merged in (task 3.1)
-var SET = C.teachMerge(C.normalizeSettings(S.settingsRaw), C.teachPending(S.outbox));
+var SET = C.teachMerge(C.normalizeSettings(S.settingsRaw), C.teachPending(S.outbox.concat(LS.get("teachLocal", []))));
 var CAT = C.buildCatalog(SET, GTM);
-function refreshSettings() { SET = C.teachMerge(C.normalizeSettings(S.settingsRaw), C.teachPending(S.outbox)); CAT = C.buildCatalog(SET, GTM); labCatRefresh(); }
+function refreshSettings() { SET = C.teachMerge(C.normalizeSettings(S.settingsRaw), C.teachPending(S.outbox.concat(LS.get("teachLocal", [])))); CAT = C.buildCatalog(SET, GTM); labCatRefresh(); }
 if (S.pack && !S.pack.stat && C.isStat((S.pack.typed || {}).n || S.pack.shipTo)) S.pack.stat = true;   // a draft resumed (3.4b): a STAT ship-to asks for its scans; a backorder draft from an older build carried no stat
 // the order form in use (shared setting): 1 = Order Supplies, 33 = the new order form; each keeps its own read position
 function orderForm() { return SET.orderForm === 33 ? "33" : CFG.forms.orders; }
@@ -5260,13 +5347,24 @@ function upsert(kind, raw, own) {   // own (4.1): this device's own write, taken
     // 4.1 the settings guard: an entry that is blank, from outside the app, or drops what this iPad keeps (the PIN, the lab form, the
     // overrides ...) is held and the kept settings stay; the device's own save and a clean entry are taken and clear a hold; with
     // nothing kept the newest entry that is neither incomplete nor from outside the app is taken
-    var why = own ? [] : C.settingsRisk(S.settingsRaw && !SETTINGS_FRESH ? SET : null, C.normalizeSettings(raw), raw);   // a first read judges each entry on its own (incomplete, notApp), not against the one before it
-    if (why.length) { if (S.settingsRaw && !SETTINGS_FRESH && !(S.held && S.held.num === n)) { S.held = { raw: raw, why: why, num: n }; LS.set("settingsHeld", S.held); heldChanged(); } return; }   // a device with nothing kept takes the newest clean entry of its first read and holds none of that read
+    if (!own && n === cur && JSON.stringify(raw) === JSON.stringify(S.settingsRaw)) return;   // an unchanged re-read of the entry in use (the five-minute overlap, Reload everything) changes nothing (review r2)
+    if (!own && n <= (S.settingsSeen || 0) && n !== cur) return;   // 4.1b: an entry decided with Keep current or Use new is never held again by a later read
+    if (SETTINGS_FRESH && !own) { FRESH_LIST.push(raw); return; }   // 4.1b: a first read is judged as a chain once the batch is in (settingsFirstRead, in syncKind)
+    var next = C.normalizeSettings(raw), bases = [S.settingsOwn ? C.normalizeSettings(S.settingsOwn) : null, BATCH_BASE].filter(Boolean);   // 4.1b: removals and steps against the own save and the read's start too
+    var curN = S.settingsRaw ? C.normalizeSettings(S.settingsRaw) : null;   // the kept entry itself, not the codes pending or taught here (review r2)
+    var why = own ? [] : riskFor(C.settingsRisk(curN, next, raw, bases));
+    if (why.length) { if (!(S.held && S.held.num === n)) holdEntry(raw, why, curN, next); return; }
     S.settingsRaw = raw; refreshSettings();
+    if (own) { S.settingsOwn = raw; LS.set("settingsOwn", raw); }
     if (S.held) { S.held = null; LS.del("settingsHeld"); heldChanged(); }
   }
 }
-var SETTINGS_FRESH = false;
+var SETTINGS_FRESH = false, FRESH_LIST = [], BATCH_BASE = null;
+// 4.1b: hold a newer form-32 entry with its facts for the band (the reason codes in words, "outside the app" said by the band itself)
+// the print station takes what touches nothing it prints with: the PIN, the reset code, the lab's form and items, taught codes, the pairs, the site email, the order form (review r2)
+var STATION_IGNORES = ["pin", "reset", "labForm", "labOverrides", "gtin", "pairs", "siteEmail", "orderForm"];
+function riskFor(why) { return S.station ? why.filter(function (w) { return STATION_IGNORES.indexOf(w) < 0; }) : why; }
+function holdEntry(raw, why, curSet, next) { S.held = { raw: raw, why: why, num: C.entryNumber(raw), facts: C.settingsFacts(why.filter(function (w) { return w !== "notApp"; }), curSet, next) }; LS.set("settingsHeld", S.held); heldChanged(); }
 function heldChanged() { if (typeof render === "function" && document.getElementById("app")) { render.keepScroll = true; render(); } }   // the Settings tab's dot and the held row follow the hold (4.1)
 function remove(kind, n) {
   if (kind === "orders") delete S.orders[n];
@@ -5309,7 +5407,8 @@ function syncKind(kind) {
   return getAll(API.delta(formOf(kind), since)).then(function (res) {
     if (gen !== S.gen) return 0;   // the device was reset while this was running
     var vals = (res && res.value) || [];
-    SETTINGS_FRESH = kind === "settings" && !S.settingsRaw;   // 4.1: a first read (a new device, or after Disconnect) takes the newest clean entry and holds none
+    SETTINGS_FRESH = kind === "settings" && !S.settingsRaw;   // 4.1b: a first read (a new device, or after Disconnect) is judged as a chain (settingsFirstRead) once the batch is in
+    if (kind === "settings") { FRESH_LIST = []; BATCH_BASE = S.settingsRaw ? C.normalizeSettings(S.settingsRaw) : null; }
     vals.forEach(function (v) {
       if (v && v["@odata.context"] && /deletedEntity/.test(v["@odata.context"])) {
         var m = /-(\d+)'\)/.exec(String(v.id || ""));
@@ -5318,7 +5417,14 @@ function syncKind(kind) {
       }
       upsert(kind, v);
     });
-    SETTINGS_FRESH = false;
+    if (kind === "settings" && SETTINGS_FRESH && FRESH_LIST.length) {   // 4.1b: the chain; with no app save in the read the newest complete entry is held, never taken on its own
+      var fr = C.settingsFirstRead(FRESH_LIST), took = fr.take ? C.normalizeSettings(fr.take) : null;
+      if (fr.hold && !riskFor(fr.why).length) { fr.take = fr.hold; fr.hold = null; took = C.normalizeSettings(fr.take); }   // the station: nothing it prints with changed
+      if (fr.take) { S.settingsRaw = fr.take; S.settingsOwn = fr.take; LS.set("settingsOwn", fr.take); refreshSettings(); }   // the entry taken is the baseline for steps until this device saves or accepts another
+      if (S.held && fr.take && S.held.num <= C.entryNumber(fr.take)) { S.held = null; LS.del("settingsHeld"); heldChanged(); }   // an older hold is history (review r2)
+      if (fr.hold) holdEntry(fr.hold, riskFor(fr.why), took, C.normalizeSettings(fr.hold));
+    }
+    SETTINGS_FRESH = false; FRESH_LIST = [];
     dedupeStore(kind);
     var tk = tokenFromLink(res && res["@odata.deltaLink"]);
     if (tk) S.tokens[tk0] = tk;
@@ -5407,7 +5513,7 @@ function loadOutbox() {
       catch (e) { ok([]); }
     }).then(function (recs) {
       S.outbox = C.mergeQueue(recs.map(C.queueItem), LS.get("outbox", []).concat(S.outbox));
-      if (C.teachPending(S.outbox)) refreshSettings();   // task 3.1: codes taught and still waiting to upload work now
+      if (C.teachPending(S.outbox.concat(LS.get("teachLocal", [])))) refreshSettings();   // task 3.1: codes taught and still waiting to upload work now
       return qdbWrite(db, S.outbox).then(function () { QDB.db = db; LS.del("outbox"); }, function () {});
     });
   });
@@ -5439,15 +5545,16 @@ function flushOutbox() {
   if (!QDB.db && !QDB.done) return loadOutbox().then(function () { QDB.done = true; return flushOutbox(); });
   if (!S.outbox.length || !S.key) return Promise.resolve();
   flushing = (function next() {
-    var item = S.outbox[0];
+    var item = S.outbox.filter(function (o) { return !(o.kind === "settings" && S.held); })[0];   // 4.1b: a settings write waits while a newer entry is held (Keep current or Use new first)
     if (!item) return Promise.resolve();
     if (item.nextTry && item.nextTry > Date.now()) { scheduleFlush(item.nextTry - Date.now()); return Promise.resolve(); }
     var wait = C.throttleWait(sentAt, Date.now());
     if (wait) { scheduleFlush(wait); return Promise.resolve(); }
     // a write that failed with an unknown outcome is checked against Cognito before it is sent again
     var check = item.uncertain ? syncKind(item.kind).then(function () { return !S.outbox.some(function (o) { return o.cid === item.cid; }); })
-      : item.teach ? syncKind("settings").then(function () { return false; }) : Promise.resolve(false);   // a taught code: the latest shared settings first, so another iPad's codes ride along (design review 3.1); a failed read is this try's failure, never a stale body (3.1b)
+      : item.teach ? syncKind("settings").then(function () { return S.held ? "held" : false; }) : Promise.resolve(false);   // the read before a taught code can hold a newer entry: then the code waits (review r2)   // a taught code: the latest shared settings first, so another iPad's codes ride along (design review 3.1); a failed read is this try's failure, never a stale body (3.1b)
     return check.then(function (alreadyThere) {
+      if (alreadyThere === "held") { scheduleFlush(60000); return Promise.resolve(); }
       if (alreadyThere) return next();
       return API.create(itemForm(item), item.teach ? settingsBody(copySet()) : item.body).then(function (entry) {   // a taught code: the settings as they are now, every pending code in (task 3.1)
         S.outbox = S.outbox.filter(function (o) { return o.cid !== item.cid; }); saveOutbox();
@@ -6016,9 +6123,9 @@ ACT.connect = function () {
     var need = [CFG.forms.orders, CFG.forms.slips, CFG.forms.log, CFG.forms.settings];
     var missing = need.filter(function (id) { return ids.indexOf(id) < 0; });
     var FN = {}; FN[CFG.forms.orders] = "Order Supplies"; FN[CFG.forms.slips] = "Packing Slips"; FN[CFG.forms.log] = "Stock Log"; FN[CFG.forms.settings] = "Settings";
-    var labOnly = !S.station && missing.length > 0 && ids.indexOf(CFG.forms.settings) >= 0 && missing.indexOf(CFG.forms.settings) < 0;   // 4.1: a key that opens Settings alone is a lab iPad's (its lab form is a setting)
+    var labOnly = !S.station && missing.length === 3 && ids.indexOf(CFG.forms.settings) >= 0;   // 4.1b: a key that opens Settings alone is a lab iPad's; one missing a warehouse form can't open (L4)
     if (missing.length && !labOnly) { S.key = old; msg.textContent = "Key can't open: " + missing.map(function (id) { return FN[id] || id; }).join(", "); return; }   // steer 18:25: whoever makes the key needs the names   // was "Key can't open forms 1, 30, 31, 32 (needs …)" (review CN3, rule 9)
-    LS.set("key", key); S.device = dev || (S.station ? "Print station" : labOnly ? "Lab iPad" : "Warehouse iPad"); LS.set("device", S.device); S.packer = packer || ""; LS.set("packer", S.packer);
+    LS.set("key", key); LS.set("labKey", labOnly ? 1 : 0); S.device = dev || (S.station ? "Print station" : labOnly ? "Lab iPad" : "Warehouse iPad"); LS.set("device", S.device); S.packer = packer || ""; LS.set("packer", S.packer);
     if (labOnly) { S.mode = "lab"; LS.set("mode", "lab"); S.tab = "ldepts"; }
     toast(labOnly ? "Connected · Lab" : "Connected");
     if (S.station) startStation(); else { render(); syncAll(); }
@@ -7380,7 +7487,7 @@ ACT.cntPad = function (el) {
 function padFocus(id) { setTimeout(function () { var f = document.getElementById(id); if (f) f.focus({ preventScroll: true }); }, 60); }
 ACT.cntPadOk = function () {
   var p = CPAD; if (!p) return;
-  var v = ($("#cpV") || { value: "" }).value.trim();
+  var v = ($("#cpV") || { value: "" }).value.trim().replace(/\.$/, "");   // 6.2: a trailing "." ("12.") would blank the number field and lose the packs
   if (p.one) { CPAD = null; closeSheet(); CNT1.v[p.f === "B" ? "b" : p.f.toLowerCase()] = v; countOneSheet(p.id); padFocus(p.pad); return; }
   var inp = document.getElementById(p.pad);
   if (p.f === "B") binHelperSet(p.pad, v);   // the helper writes its field, the sum and the line (BH_HOOK.cnt)
@@ -8470,11 +8577,12 @@ function settingsBody(next) {
 // over another iPad's newer settings, taught codes included); a failed read is "Not saved", never a stale body. `change` is a function
 // of the fresh copy (the whole entry is one Cognito record, so each save carries every field)
 function saveSettings(change, done, quiet) {   // quiet: the caller redraws its own card (the pairs card), the rest of the screen stays as typed
-  if (S.mode === "lab" && !labCanWrite()) { toast("Settings are changed on " + SET.labPinSetBy, 6000); return Promise.resolve(); }   // 4.1: lab iPads read form 32; the supervisor's iPad (the one that set the PIN) writes it
+  if (S.held) { toast("New settings waiting: Keep current or Use new first", 6000); return Promise.resolve(); }   // 4.1b: no write over a held entry (it would carry the old PIN and drop the other side's edits)
+  if ((S.mode === "lab" || LS.get("labKey", 0)) && !labCanWrite() && !RESET_OK) { toast("Settings are changed on " + pinDevName(), 6000); return Promise.resolve(); }   // 4.1b: a lab key never writes, whatever Used for says, unless the reset code was just given   // 4.1: lab iPads read form 32; the supervisor's iPad (the one that set the PIN) writes it
   toast("Saving settings…");
-  return syncKind("settings").then(function () { return API.create(CFG.forms.settings, settingsBody(change(copySet()))); }).then(function (entry) {
+  return syncKind("settings").then(function () { if (S.held) { toast("New settings waiting: Keep current or Use new first", 6000); throw { held: true }; } return API.create(CFG.forms.settings, settingsBody(change(copySet()))); }).then(function (entry) {   // the read first can hold a newer entry: then nothing is written over it (review r2)
     upsert("settings", entry, true); persist("settings"); toast("Settings saved for every device"); if (done) done(); if (!quiet) { render.keepScroll = true; render(); }   // own: taken whatever the guard says, and a hold goes (4.1)
-  }, function (e) { toast("Not saved: " + errText(e), 6000); });
+  }, function (e) { RESET_OK = false; if (e && e.held) return; toast("Not saved: " + errText(e), 6000); });
 }
 // 4.1 the held entry: a newer form-32 entry the guard would not take. Keep current drops it (it stays ignored until a newer one comes);
 // Use new asks the supervisor PIN against the kept hash (never the incoming one) and applies it; with no kept hash it applies at once
@@ -8482,13 +8590,20 @@ function saveSettings(change, done, quiet) {   // quiet: the caller redraws its 
 function heldWho() { var h = S.held; if (!h) return ""; var f = C.flatten(h.raw || {}); return h.why.indexOf("notApp") < 0 && f.UpdatedBy ? String(f.UpdatedBy) : ""; }
 function heldWhen() { var h = S.held; return h ? when(C.entryWhen(h.raw) || new Date().toISOString()) : ""; }
 // the band: the header's pattern (the time, then "by"), the warning's shape, the two choices; while it shows, the header reads "In use" (review 4.1)
-function heldRow() { if (!S.held) return ""; var who = heldWho(); return '<div class="banner warn held" role="status"><span class="held-ic" aria-hidden="true">' + CHIP_IC.tri + '</span><div class="grow">New settings · ' + esc(heldWhen()) + (who ? " by " + esc(who) : " · outside the app") + '</div><button class="btn sm" data-act="heldKeep">Keep current</button><button class="btn sm" data-act="heldUse">Use new</button></div>'; }
+function heldRow() { if (!S.held) return ""; var who = heldWho(); return '<div class="banner warn held" role="status"><span class="held-ic" aria-hidden="true">' + CHIP_IC.tri + '</span><div class="grow">New settings · ' + esc(heldWhen()) + (who ? " by " + esc(who) : " · outside the app") + (S.held.facts ? '<div class="heldfacts">' + S.held.facts.split(" · ").map(function (f) { return "<span>" + esc(f) + "</span>"; }).join(" · ") + "</div>" : "") + '</div><button class="btn sm" data-act="heldKeep">Keep current</button><button class="btn sm" data-act="heldUse">Use new</button></div>'; }
 // both choices can be taken back for 5 s (review 4.1): Use new puts the previous settings and the hold back, Keep current puts the hold back
-function heldApply() { var h = S.held, prev = S.settingsRaw; if (!h) return; S.held = null; LS.del("settingsHeld"); S.settingsRaw = h.raw; refreshSettings(); persist("settings"); render.keepScroll = true; render(); toastUndo("Using new settings", function () { S.settingsRaw = prev; S.held = h; LS.set("settingsHeld", h); refreshSettings(); persist("settings"); render.keepScroll = true; render(); }); undoFocus(); }
+function heldApply() { var h = S.held, prev = S.settingsRaw, prevOwn = S.settingsOwn; if (!h) return;
+  if (h.num <= (S.settingsRaw ? C.entryNumber(S.settingsRaw) : 0)) { S.held = null; LS.del("settingsHeld"); heldChanged(); return; }   // an older hold is stale once a newer entry is in use (review r2)
+  S.held = null; LS.del("settingsHeld"); S.settingsSeen = h.num; LS.set("settingsSeen", h.num); S.settingsRaw = h.raw; S.settingsOwn = h.raw; LS.set("settingsOwn", h.raw); refreshSettings(); persist("settings"); scheduleFlush(6000);   // the waiting writes go after the Undo window
+  if (S.station) { ST.msg = "Using new settings"; render(); return; }
+  render.keepScroll = true; render(); toastUndo("Using new settings", function () { S.settingsRaw = prev; S.settingsOwn = prevOwn; LS.set("settingsOwn", prevOwn); S.held = h; LS.set("settingsHeld", h); refreshSettings(); persist("settings"); render.keepScroll = true; render(); }); undoFocus(); }
+function pinDevName() { return String(SET.labPinSetBy || "").replace(/ #[a-z0-9]{4}$/, ""); }   // the device's name without its id, for the toasts
 // the band's own pill took the band away, so the focus goes to the toast's Undo (review 4.1)
 function undoFocus() { var u = $('#toast [data-act="undo"]'); if (u) u.focus(); }
-ACT.heldKeep = function () { var h = S.held; if (!h) return; S.held = null; LS.del("settingsHeld"); render.keepScroll = true; render(); toastUndo("Kept current settings", function () { S.held = h; LS.set("settingsHeld", h); render.keepScroll = true; render(); }); undoFocus(); };
-ACT.heldUse = function () { if (SET.labPinHash) labPin(heldApply); else heldApply(); };
+ACT.heldKeep = function () { var h = S.held; if (!h) return; S.held = null; LS.del("settingsHeld"); S.settingsSeen = h.num; LS.set("settingsSeen", h.num); scheduleFlush(6000);
+  if (S.station) { ST.msg = "Kept current settings"; render(); return; }
+  render.keepScroll = true; render(); toastUndo("Kept current settings", function () { S.held = h; LS.set("settingsHeld", h); render.keepScroll = true; render(); }); undoFocus(); };
+ACT.heldUse = function () { if (S.station) { heldApply(); return; } if (SET.labPinHash) labPin(heldApply, null, true); else heldApply(); };   // 4.1b: Use new always asks the PIN (no ten-minute grace); the station holds only what it prints with, no PIN there
 function copySet() { return JSON.parse(JSON.stringify(SET)); }
 // 3.4: the look-alike pairs on Settings; every change is saved for every device at once (as Edit item does)
 var PAIR_A = null;
@@ -8708,7 +8823,7 @@ ACT.disconnect = function () {
     '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn danger" data-act="disconnectYes">Disconnect</button>');
 };
 ACT.disconnectYes = function () {
-  ["key", "orders", "slips", "logs", "labs", "mode", "settingsRaw", "tokens", "hiOrder", "outbox", "draft", "recv", "count", "calls", "st.next", "st.first", "st.printed", "st.lastPrint"].forEach(function (k) { LS.del(k); });
+  ["key", "orders", "slips", "logs", "labs", "mode", "settingsRaw", "tokens", "hiOrder", "outbox", "draft", "recv", "count", "calls", "st.next", "st.first", "st.printed", "st.lastPrint", "settingsHeld", "settingsSeen", "settingsOwn", "labKey", "teachLocal"].forEach(function (k) { LS.del(k); });   // 4.1b: the hold and what the guard remembers go with the key
   S.outbox = [];
   saveOutbox().then(function () { LS.del("outbox"); location.hash = ""; location.reload(); });
 };
@@ -9169,16 +9284,30 @@ ACT.lsOrdGo = function (el) {
 /* ---------- supervisor edits (4.10): the PIN is asked once, then good for 10 minutes on this iPad ---------- */
 var PIN_OK = 0, PIN_NEXT = null;
 // 4.1: the supervisor device is the one that set the PIN (settings labPinSetBy); until a PIN exists any lab iPad may write settings
-function labCanWrite() { return !SET.labPinSetBy || SET.labPinSetBy === S.device; }
+function labCanWrite() { var t = SET.labPinSetBy || ""; if (!t) return true; var m = / #([a-z0-9]{4})$/.exec(t); return !!m && m[1] === devId(); }   // 4.1b: the device's id, so a rename moves nothing; 4.1c: by id only (a plain name, which any iPad can take, matches no device; the reset code sets the PIN again)
+var LAB_SAVE_GO = null;   // the PIN save the reset code may open (review r2: nothing else)
+var RESET_OK = false;   // 4.1b: the reset code was just given on this iPad: the next PIN save is its own
 var PIN_WANT = "";
-function labPin(next, hash) {   // hash (4.1): check against this one (the device's own copy of the PIN it set) instead of the kept hash
+function labPin(next, hash, force) {   // hash (4.1): check against this one (the device's own copy of the PIN it set) instead of the kept hash; force (4.1b): no grace
   PIN_WANT = hash || SET.labPinHash;
   if (!PIN_WANT) { toast("Set the supervisor PIN in Settings"); return; }
-  if (!hash && Date.now() - PIN_OK < 10 * 60 * 1000) { next(); return; }
+  if (!hash && !force && Date.now() - PIN_OK < 10 * 60 * 1000) { next(); return; }
   PIN_NEXT = next;
-  openSheet("Supervisor PIN", '<label class="f">PIN<input id="lbPinAsk" type="password" inputmode="numeric" autocomplete="off" data-enter="labPinGo" autofocus></label>',
-    '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="labPinGo">OK</button>');
+  openSheet("Supervisor PIN", '<label class="f">PIN<input id="lbPinAsk" type="password" inputmode="numeric" autocomplete="off" data-enter="labPinGo" autofocus></label>' + (SET.labResetHash && !hash ? '<button class="btn ghost" data-act="labPinForgot">Forgot the PIN</button>' : ""),   // under the field, not a third answer in the foot (design review 4.1b)
+    '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="labPinGo">Continue</button>');
 }
+// 4.1b: the reset code set with the first PIN. It opens what the PIN opens once, and lets a new PIN be set from this iPad (a wiped or
+// replaced supervisor iPad, a forgotten PIN); the procedure is in docs/GO-LIVE.md
+ACT.labPinForgot = function () { var n = PIN_NEXT; openSheet("Reset code", '<label class="f">Reset code<input id="lbResetAsk" type="password" inputmode="numeric" autocomplete="off" data-enter="labResetGo" autofocus></label>', '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="labResetGo">Continue</button>'); PIN_NEXT = n; };
+ACT.labResetGo = function () {
+  var code = ($("#lbResetAsk").value || "").trim();
+  if (!code) { toast("Enter the reset code"); return; }
+  C.sha256(code).then(function (h) {
+    if (h !== SET.labResetHash) { toast("Wrong reset code"); $("#lbResetAsk").value = ""; $("#lbResetAsk").focus(); return; }
+    PIN_OK = Date.now(); closeSheet();
+    var n = PIN_NEXT; PIN_NEXT = null; RESET_OK = !!n && n === LAB_SAVE_GO; if (n) n();
+  });
+};
 ACT.labPinGo = function () {
   var pin = ($("#lbPinAsk").value || "").trim();
   if (!pin) { toast("Enter the PIN"); return; }
@@ -9385,10 +9514,11 @@ function usedForField() {
   return '<label class="f">Used for<select data-ch="devMode"><option value="warehouse"' + (S.mode !== "lab" ? " selected" : "") + '>Warehouse</option><option value="lab"' + (S.mode === "lab" ? " selected" : "") + ">Lab</option></select></label>";
 }
 IN.devMode = function (el) {
-  S.mode = el.value === "lab" ? "lab" : "warehouse"; LS.set("mode", S.mode);
-  S.tab = S.mode === "lab" ? "ldepts" : "queue"; LS.set("tab", S.tab); S.view = null;
-  render(); window.scrollTo(0, 0);
-  if (S.key) syncAll();
+  var want = el.value === "lab" ? "lab" : "warehouse";
+  var go = function () { S.mode = want; LS.set("mode", S.mode); S.tab = S.mode === "lab" ? "ldepts" : "queue"; LS.set("tab", S.tab); S.view = null; render(); window.scrollTo(0, 0); if (S.key) syncAll(); };
+  if (want !== "lab" && LS.get("labKey", 0)) { toast("This iPad's key opens the lab only"); el.value = "lab"; return; }   // 4.1b: a lab key never runs the warehouse screens
+  if (S.mode === "lab" && SET.labPinHash && !labCanWrite()) { el.value = "lab"; labPin(go, null, true); return; }   // 4.1b (review item 8): Used for sits behind the PIN on a lab iPad
+  go();
 };
 function renderLabSettings() {
   return uiAppBar({ title: "Settings" }) + heldRow() +   // 4.1: a held form-32 entry, Keep current / Use new, above the cards
@@ -9398,24 +9528,31 @@ function renderLabSettings() {
     '<div class="row"><span class="muted" style="font-size:var(--fs-15)">Connected' + (S.lastSync ? " · checked " + esc(ago(new Date(S.lastSync).toISOString())) : "") + '</span><div class="grow"></div>' +
     '<button class="btn" data-act="ipKey">Change key</button>' + unknownBtn() + '<button class="btn" data-act="reloadAll">Reload everything</button><button class="btn" data-act="disconnect">Disconnect</button></div></div></div>' +
     '<div class="card"><div class="ch"><h2>Lab</h2></div><div class="cb" style="display:flex;flex-direction:column;gap:var(--sp-3)"><div class="grid2">' +
-    '<label class="f">Lab form #<input id="lbForm" type="number" inputmode="numeric" enterkeyhint="done" value="' + esc(SET.labForm || "") + '"></label>' +
-    '<label class="f">Supervisor PIN<input id="lbPinSet" type="password" inputmode="numeric" autocomplete="off" placeholder="' + (SET.labPinHash ? "Set" : "Not set") + '"></label></div>' +
+    '<label class="f">Lab form #<input id="lbForm" type="number" inputmode="numeric" enterkeyhint="done" value="' + esc(SET.labForm || "") + '"></label></div><div class="grid2">' +   // the PIN and the code that resets it side by side (design review 4.1b)
+    '<label class="f">Supervisor PIN<input id="lbPinSet" type="password" inputmode="numeric" autocomplete="off" placeholder="' + (SET.labPinHash ? "Set" : "Not set · 4 to 8 digits") + '"></label>' +
+    '<label class="f">Reset code<input id="lbReset" type="password" inputmode="numeric" autocomplete="off" placeholder="' + (SET.labResetHash ? "Set" : "Not set · 6 to 8 digits") + '"></label></div>' +   // 4.1b: set with the first PIN; a forgotten PIN or a wiped supervisor iPad is not a lock-out
     '<div class="row"><button class="btn" data-act="labThDown">Download thresholds</button><button class="btn" data-act="labThUp">Upload thresholds</button><div class="grow"></div><button class="btn primary" data-act="labSaveSet">Save</button></div></div></div>';   // 1.4: Save last in its row
 }
 ACT.labSaveSet = function () {
   var n = parseInt($("#lbForm").value, 10);
   if (!(n > 0)) { toast("Enter the lab form number"); return; }
-  var pin = ($("#lbPinSet").value || "").trim();
+  var pin = ($("#lbPinSet").value || "").trim(), rc = ($("#lbReset") ? $("#lbReset").value || "" : "").trim();
   if (pin && !/^\d{4,8}$/.test(pin)) { toast("PIN: 4 to 8 digits"); return; }
+  if (rc && !/^\d{6,8}$/.test(rc)) { toast("Reset code: 6 to 8 digits"); return; }
+  if (pin && !rc && !SET.labResetHash) { toast("Set a reset code too (6 to 8 digits)"); return; }   // 4.1b: the first PIN comes with its reset code
   var go = function () {
-    (pin ? C.sha256(pin) : Promise.resolve(null)).then(function (h) {
-      saveSettings(function (next) { next.labForm = String(n); if (h) { next.labPinHash = h; next.labPinSetBy = S.device; LS.set("pinHash", h); } return next; }, function () { syncAll(); });   // on the latest settings (3.4b); the PIN's device and this device's own copy (4.1)
+    Promise.all([pin ? C.sha256(pin) : Promise.resolve(null), rc ? C.sha256(rc) : Promise.resolve(null)]).then(function (hs) {
+      var h = hs[0], rh = hs[1];
+      saveSettings(function (next) { next.labForm = String(n); if (h) { next.labPinHash = h; next.labPinSetBy = devTag(); } if (rh) next.labResetHash = rh; return next; },
+        function () { if (h) LS.set("pinHash", h); RESET_OK = false; syncAll(); });   // on the latest settings (3.4b); the PIN's device is this one's tag (4.1b), its own copy kept once the save landed (L1)
     });
   };
-  // once a PIN is set, changing it or the lab form needs it. 4.1: while the shared hash is blank after a wipe, a new PIN is set only on the
-  // device that set it, after the old PIN (its own copy); the first PIN ever can be set anywhere
-  if (SET.labPinHash) labPin(go);
-  else if (pin && SET.labPinSetBy && (SET.labPinSetBy !== S.device || !LS.get("pinHash", ""))) { toast("The PIN is set on " + SET.labPinSetBy, 6000); return; }
+  // once a PIN is set, changing it or the lab form needs it. 4.1b: the reset code opens the way on any lab iPad (a wiped or replaced
+  // supervisor iPad, a forgotten PIN); without one, a blank shared hash after a wipe still needs the device that set it, after the old PIN
+  LAB_SAVE_GO = go;
+  if (RESET_OK) go();
+  else if (SET.labPinHash) labPin(go);
+  else if (pin && SET.labPinSetBy && (!labCanWrite() || !LS.get("pinHash", ""))) { if (SET.labResetHash) { PIN_NEXT = go; ACT.labPinForgot(); } else toast("The PIN is set on " + pinDevName(), 6000); return; }
   else if (pin && SET.labPinSetBy) labPin(go, LS.get("pinHash", ""));
   else go();
 };
@@ -9675,7 +9812,7 @@ function renderStation() {
   var nextLine = saidPrint ? (ST.next ? "Next slip #" + ST.next : "") :
     (ST.lastPrint ? "Last printed " + esc(when(new Date(ST.lastPrint.at).toISOString())) + " · " : "") + (ST.next ? "next slip #" + ST.next : "");
   var hero = '<div class="hero"><div class="dot ' + dot + '"></div><div><h1>' + title + '</h1><div class="meta" style="font-size:var(--fs-15);color:var(--ink-2)">' + meta + "</div>" +
-    '<div class="meta" style="font-size:var(--fs-13)">' + nextLine + "</div>" + labWarn +
+    '<div class="meta" style="font-size:var(--fs-13)">' + nextLine + "</div>" + (S.held ? '<div class="held-line"><span class="held-ic" aria-hidden="true">' + CHIP_IC.tri + '</span><span class="grow">New settings · ' + esc(heldWhen()) + (heldWho() ? " by " + esc(heldWho()) : " · outside the app") + (S.held.facts ? " · " + esc(S.held.facts) : "") + '</span><button class="btn sm" data-act="heldKeep">Keep current</button><button class="btn sm" data-act="heldUse">Use new</button></div>' : "") + labWarn +   // 4.1b (L5): the station says so instead of holding in silence
     '<div class="row" style="margin-top:var(--sp-4)"><button class="btn primary big" data-act="stPrintNew"' + (ST.busy ? " disabled" : "") + '>Print new slips</button>' +
     '<button class="btn" data-act="stTest">Test slip</button>' + (labelsOn() ? '<button class="btn" data-act="stTestLabel">Test label</button>' : "") +
     '<button class="btn" data-act="stShelf">Shelf labels</button><button class="btn" data-act="stKey">Change key</button></div></div></div>';
@@ -10096,7 +10233,9 @@ function teachAsk(sc) {
   if (S.mode === "lab") openLabPicker(); else openItemPicker("teach", "Which item?");
 }
 var TEACH_UNDO_MS = 5000;   // the settings write waits out the toast's Undo (as a packed slip does), so an Undo never loses to the upload
-function teachSave(teach) { var cid = uid(); queueWrite("settings", null, { cid: cid, teach: teach }, TEACH_UNDO_MS); return cid; }
+function teachSave(teach) { var cid = uid();
+  if ((S.mode === "lab" || LS.get("labKey", 0)) && !labCanWrite()) { var loc = LS.get("teachLocal", []); loc.push({ cid: cid, teach: teach }); LS.set("teachLocal", loc.slice(-200)); refreshSettings(); toast("Taught on this iPad only"); return cid; }   // 4.1b: a lab iPad that is not the supervisor's keeps its codes to itself (its key reads form 32)
+  queueWrite("settings", null, { cid: cid, teach: teach }, TEACH_UNDO_MS); return cid; }
 // what the scan is about to change, so Undo puts back that one line: Receive's line for the item, a delivery's row for the key
 function teachSnap(id, key) {
   if (S.mode === "lab") { var dl = S.tab === "ldeliv" && S.ldl; return dl ? { lab: key, was: dl.vals[key] ? JSON.stringify(dl.vals[key]) : null } : null; }

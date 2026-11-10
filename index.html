@@ -3248,24 +3248,78 @@ var CORE = (function () {
   }
   /* ---------- product codes scanned on an item (10 Nov 2026) ----------
      Jackson scans the barcodes and QR codes printed on a product from its item sheet; what each one holds is kept as read.
-     They ride on Adjustment entries with no quantities, as Mark ordered does: codes {item id: [{r: the text as read, f: the
-     symbology ("ean_13", "data_matrix" ...), lv: "" | "ea" | "pk" | "cs" (what the code was on), g: its GTIN when it has one,
-     x: 1 takes the code off}]}. The latest entry per item and code wins. Nothing else reads them yet. */
+     They ride on Adjustment entries with no quantities, as Mark ordered does: codes {item id: [{r: the text as read (or typed),
+     f: the symbology ("ean_13", "data_matrix" ... "typed"), lv: "" | "ea" | "pk" | "cs" (what the code was on), nt: a note,
+     g: its GTIN when it has one, d: {name: value} everything the code holds, for whoever reads the entry (the app reads it
+     again from r), x: 1 takes the code off}]}. The latest entry per item and code wins. Nothing else reads them yet.
+     Loose on purpose (John, 10 Nov: "be loose so we can easily capture all the data available"): any text is kept, the code
+     and the note can be typed or changed by hand, and a code the app can't take apart is still kept whole. */
   var CODE_MAX = 400;   // a QR code can hold a page of text; the first 400 characters are kept
   var CODE_LEVELS = [["ea", "Each"], ["pk", "Pack"], ["cs", "Case"]];
-  var CODE_FORMATS = { qr_code: "QR", data_matrix: "Data Matrix", code_128: "Code 128", code_39: "Code 39", ean_13: "EAN-13", ean_8: "EAN-8", upc_a: "UPC-A", upc_e: "UPC-E", itf: "ITF", pdf417: "PDF417", aztec: "Aztec" };
+  var CODE_FORMATS = { qr_code: "QR", micro_qr_code: "Micro QR", data_matrix: "Data Matrix", code_128: "Code 128", code_39: "Code 39", code_93: "Code 93", codabar: "Codabar", ean_13: "EAN-13", ean_8: "EAN-8", upc_a: "UPC-A", upc_e: "UPC-E", itf: "ITF", pdf417: "PDF417", aztec: "Aztec", databar: "DataBar", databar_expanded: "DataBar", databar_limited: "DataBar", typed: "Typed" };
   function codeFormat(f) { return CODE_FORMATS[f] || String(f || "").replace(/_/g, " ").toUpperCase(); }
   function codeLevel(lv) { var m = CODE_LEVELS.filter(function (x) { return x[0] === lv; })[0]; return m ? m[1] : ""; }
+  // the GS1 application identifiers by name; one not listed is shown as "AI 240"
+  var GS1_NAMES = { "00": "SSCC", "01": "GTIN", "02": "GTIN inside", "10": "Lot", "11": "Made", "12": "Due", "13": "Packed", "15": "Best before", "16": "Sell by", "17": "Expiry", "20": "Variant", "21": "Serial", "22": "Consumer variant", "30": "Count", "37": "Count inside",
+    "240": "Extra product ID", "241": "Customer part no.", "250": "Second serial", "251": "Source reference", "400": "Order number", "410": "Ship to", "414": "Location", "420": "Postal code", "422": "Country of origin", "7003": "Expiry time", "8004": "Asset ID", "8200": "Web address" };
+  var GS1_DATE_AI = { "11": 1, "12": 1, "13": 1, "15": 1, "16": 1, "17": 1 }, GS1_FIRST = ["01", "02", "17", "10", "21"];
+  // a HIBC code (the "+" barcodes on medical supplies), read loosely: the maker's code, the catalog number, the unit of measure,
+  // and from the second part the expiry, the lot and the quantity when they are in one of the usual forms; null when it is no HIBC
+  function hibcFields(s) {
+    var out = [], m = /^\+([A-Z][A-Z0-9]{3})(.+)$/.exec(s), sec = "";
+    if (m) {
+      var body = m[2], cut = body.indexOf("/"), prim = cut < 0 ? body.slice(0, -1) : body.slice(0, cut);   // the last character of the whole code is its check character
+      if (prim.length < 2) return null;
+      out.push(["Maker (HIBC)", m[1]], ["Catalog no.", prim.slice(0, -1)], ["Unit of measure", prim.slice(-1)]);
+      if (cut >= 0) sec = body.slice(cut + 1, -1);
+    } else if (/^\+\$/.test(s) && s.length > 4) sec = s.slice(1, -2);   // the second part printed as its own barcode: a link character and the check character end it
+    else return null;
+    if (sec) {
+      var d = /^\$\$(8\d{2}|9\d{5})?(?:([2-6])(\d+)|7|(?=[01]))/.exec(sec), rest, date = "", q;
+      if (d) {
+        rest = sec.slice(d[0].length); q = d[1] ? String(+d[1].slice(1)) : "";
+        var kind = d[2] || (/^\$\$(8\d{2}|9\d{5})?7/.test(sec) ? "7" : "1"), digits = d[2] ? d[3] : rest, n = { "1": 4, "2": 6, "3": 6, "4": 8, "5": 5, "6": 7 }[kind] || 0, t = digits.slice(0, n), yy, mo, dd, jj;
+        if (d[2]) rest = d[3].slice(n) + rest; else if (kind === "1") rest = rest.slice(n);
+        if (kind === "1" && /^\d{4}$/.test(t)) date = gs1Date(t.slice(2) + t.slice(0, 2) + "00");
+        else if (kind === "2" && t.length === 6) date = gs1Date(t.slice(4) + t.slice(0, 4));
+        else if ((kind === "3" || kind === "4") && t.length >= 6) date = gs1Date(t.slice(0, 6));
+        else if ((kind === "5" || kind === "6") && t.length >= 5) { yy = 2000 + +t.slice(0, 2); jj = +t.slice(2, 5); if (jj >= 1 && jj <= 366) { var dt = new Date(Date.UTC(yy, 0, jj)); mo = dt.getUTCMonth() + 1; dd = dt.getUTCDate(); date = dt.getUTCFullYear() + "-" + ("0" + mo).slice(-2) + "-" + ("0" + dd).slice(-2); } }
+        if (date) out.push(["Expiry", date]);
+        if (rest) out.push(["Lot", rest]);
+        if (q) out.push(["Count", q]);
+        if (!date && n) out.push(["More", sec]);
+      } else if (/^\$[^$]/.test(sec)) out.push(["Lot", sec.slice(1)]);
+      else out.push(["More", sec]);
+    }
+    return out.length ? out : null;
+  }
+  // everything a code holds, by name: [[name, value]] (dates as YYYY-MM-DD); [] for text the app can't take apart
+  function codeFields(raw, format) {
+    var s = String(raw == null ? "" : raw).trim(), out = [];
+    if (!s || format === "typed" && !/^[\d(\]+]/.test(s)) return out;
+    var bare = s.replace(/^\][A-Za-z]\d/, ""), h = bare.charAt(0) === "+" ? hibcFields(bare) : null;
+    if (h) return h;
+    var g = parseGS1(s, format === "typed" ? "" : format);
+    if (!g) return out;
+    var keys = Object.keys(g.ai).sort(function (a, b) { var x = GS1_FIRST.indexOf(a), y = GS1_FIRST.indexOf(b); return (x < 0 ? 9 : x) - (y < 0 ? 9 : y) || (a < b ? -1 : a > b ? 1 : 0); });
+    keys.forEach(function (k) {
+      var v = g.ai[k]; if (v == null || v === "") return;
+      if (k === "01" || k === "02") v = gtin14(v) || v; else if (GS1_DATE_AI[k]) v = gs1Date(v) || v;
+      out.push([GS1_NAMES[k] || "AI " + k, String(v)]);
+    });
+    return out;
+  }
+  function fieldOf(fields, name) { var f = (fields || []).filter(function (x) { return x[0] === name; })[0]; return f ? f[1] : ""; }
   // one scan as it is kept: null for nothing read and for our own labels (a bin or item label is not a product's code)
   function codeFromScan(raw, format, at, by) {
     var sc = scanCode(raw, format);
     if (!sc.raw || sc.kind === "loc" || sc.kind === "lab" || sc.kind === "item") return null;
-    var c = { r: sc.raw.slice(0, CODE_MAX), f: String(format || ""), lv: "" };
-    if (sc.gtin) c.g = sc.gtin;
+    var c = { r: sc.raw.slice(0, CODE_MAX), f: String(format || ""), lv: "", nt: "" };
+    var g = fieldOf(codeFields(c.r, c.f), "GTIN"); if (g) c.g = g;
     if (at) c.at = at; if (by) c.by = by;
     return c;
   }
-  // {item id: [{r, f, lv, g, lot, exp, at, by}]}, each item's codes in the order they were first scanned
+  // {item id: [{r, f, lv, nt, g, lot, exp, d: [[name, value]], at, by}]}, each item's codes in the order they were first scanned
   function itemCodes(logs) {
     var out = {};
     dedupe(logs || []).slice().sort(function (a, b) { return a.at < b.at ? -1 : a.at > b.at ? 1 : 0; }).forEach(function (g) {
@@ -3276,7 +3330,8 @@ var CORE = (function () {
           if (!c || typeof c.r !== "string" || !c.r) return;
           var i = -1; list.forEach(function (o, k) { if (o.r === c.r) i = k; });
           if (c.x) { if (i >= 0) list.splice(i, 1); return; }
-          var sc = scanCode(c.r, c.f), n = { r: c.r, f: String(c.f || ""), lv: codeLevel(c.lv) ? c.lv : "", g: sc.gtin || "", lot: sc.lot || "", exp: sc.exp || "", at: i >= 0 ? list[i].at : g.at, by: i >= 0 ? list[i].by : (g.by || "") };
+          var f = String(c.f || ""), d = codeFields(c.r, f);
+          var n = { r: c.r, f: f, lv: codeLevel(c.lv) ? c.lv : "", nt: typeof c.nt === "string" ? c.nt : "", g: fieldOf(d, "GTIN"), lot: fieldOf(d, "Lot"), exp: fieldOf(d, "Expiry"), d: d, at: i >= 0 ? list[i].at : g.at, by: i >= 0 ? list[i].by : (g.by || "") };
           if (i >= 0) list[i] = n; else list.push(n);
         });
         if (!list.length) delete out[key];
@@ -3284,25 +3339,46 @@ var CORE = (function () {
     });
     return out;
   }
-  // what one save of an item's codes sends: the new ones, the ones whose level changed, and x: 1 for the ones taken off; null for no change
+  // the list as it will be saved: blank rows dropped, the text trimmed and cut to 400, the same text once
+  function codesClean(list) {
+    var seen = {}, out = [];
+    (list || []).forEach(function (c) {
+      var r = String(c && c.r != null ? c.r : "").trim().slice(0, CODE_MAX); if (!r || seen[r]) return; seen[r] = 1;
+      out.push({ r: r, f: String(c.f || ""), lv: codeLevel(c.lv) ? c.lv : "", nt: String(c.nt || "").trim().slice(0, CODE_MAX) });
+    });
+    return out;
+  }
+  // what one save of an item's codes sends: the new ones, the ones whose level or note changed, and x: 1 for the ones taken off
+  // (a code whose text was changed is the old one off and the new one on); null for no change
   function codesDiff(was, now) {
     var out = [], find = function (list, r) { return (list || []).filter(function (c) { return c.r === r; })[0] || null; };
-    (now || []).forEach(function (c) { var o = find(was, c.r); if (!o || (o.lv || "") !== (c.lv || "")) { var n = { r: c.r, f: c.f || "", lv: c.lv || "" }; if (c.g) n.g = c.g; out.push(n); } });
+    now = codesClean(now);
+    now.forEach(function (c) {
+      var o = find(was, c.r); if (o && (o.lv || "") === c.lv && (o.nt || "") === c.nt) return;
+      var n = { r: c.r, f: c.f, lv: c.lv }, d = codeFields(c.r, c.f), all = {};
+      if (c.nt) n.nt = c.nt;
+      if (fieldOf(d, "GTIN")) n.g = fieldOf(d, "GTIN");
+      d.forEach(function (x) { all[x[0]] = x[1]; }); if (d.length) n.d = all;
+      out.push(n);
+    });
     (was || []).forEach(function (o) { if (!find(now, o.r)) out.push({ r: o.r, x: 1 }); });
     return out.length ? out : null;
   }
-  // the words for one code: "GTIN 00382903367818 · Lot A12 · Exp 12/31/2027", or the text itself
-  function codeText(c) {
-    if (!c) return "";
-    if (c.g) return "GTIN " + c.g + (c.lot ? " · Lot " + c.lot : "") + (c.exp ? " · Exp " + fmtDate(c.exp) : "");
-    return String(c.r).replace(/[\x00-\x1f]/g, " ");
-  }
-  var CODES_HEAD = ["Item ID", "Item", "Vendor", "Vendor item #", "Code", "Type", "GTIN", "Lot", "Expiry", "On", "Scanned by", "Scanned"];
+  function codeDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(v) ? fmtDate(v) : v; }
+  // the words for what a code holds: "GTIN 00382903367818 · Expiry 12/31/2027 · Lot A12 · Serial 77"; "" when it is only text
+  function codeFieldsText(c) { return codeFields(c && c.r, c && c.f).map(function (x) { return x[0] + " " + codeDate(x[1]); }).join(" · "); }
+  // the words for one code: what it holds, or the text itself
+  function codeText(c) { return !c ? "" : codeFieldsText(c) || String(c.r).replace(/[\x00-\x1f]/g, " "); }
+  var CODES_HEAD = ["Item ID", "Item", "Vendor", "Vendor item #", "Code", "Type", "On", "Note", "GTIN", "Lot", "Expiry", "Serial", "Catalog no.", "Everything in the code", "Scanned by", "Scanned"];
   function codeRows(codes, items) {
     var rows = [], by = {}; (items || []).forEach(function (it) { by[it.id] = it; });
     Object.keys(codes || {}).sort(function (a, b) { var x = (by[a] || {}).n || a, y = (by[b] || {}).n || b; return x < y ? -1 : x > y ? 1 : 0; }).forEach(function (id) {
       var it = by[id] || {};
-      codes[id].forEach(function (c) { rows.push([id, it.n || "", it.v || "", it.vi || "", String(c.r).replace(/[\x00-\x1f]/g, " "), codeFormat(c.f), c.g || "", c.lot || "", c.exp || "", codeLevel(c.lv), c.by || "", c.at ? String(c.at).slice(0, 16).replace("T", " ") : ""]); });
+      codes[id].forEach(function (c) {
+        var d = codeFields(c.r, c.f);
+        rows.push([id, it.n || "", it.v || "", it.vi || "", String(c.r).replace(/[\x00-\x1f]/g, " "), codeFormat(c.f), codeLevel(c.lv), c.nt || "", fieldOf(d, "GTIN"), fieldOf(d, "Lot"), fieldOf(d, "Expiry"), fieldOf(d, "Serial"), fieldOf(d, "Catalog no."),
+          d.map(function (x) { return x[0] + ": " + x[1]; }).join("; "), c.by || "", c.at ? String(c.at).slice(0, 16).replace("T", " ") : ""]);
+      });
     });
     return rows;
   }
@@ -4969,7 +5045,7 @@ var CORE = (function () {
     normalizeOrder: normalizeOrder, normalizeSlip: normalizeSlip, normalizeLog: normalizeLog, labWeek: labWeek, normalizeLab: normalizeLab, labDepts: labDepts, labLatestCount: labLatestCount, labStock: labStock, labOrdered: labOrdered, labView: labView, labApproved: labApproved, labPrune: labPrune, labWeekLines: labWeekLines, labLastWeek: labLastWeek, labLineTimes: labLineTimes, labLast: labLast, labTouched: labTouched, labCloses: labCloses, labReview: labReview, sha256: sha256, applyLabOverrides: applyLabOverrides, labFill: labFill, LAB_TH_HEAD: LAB_TH_HEAD, labThresholdRows: labThresholdRows, readLabThresholds: readLabThresholds, labThMerge: labThMerge, labEditOv: labEditOv,
     tokens: tokens, parseQty: parseQty, toSlipUnits: toSlipUnits, parseComments: parseComments,
     slipData: slipData, readSlipData: readSlipData, audit: audit, logData: logData, labData: labData,
-    CODE_LEVELS: CODE_LEVELS, CODES_HEAD: CODES_HEAD, codeFormat: codeFormat, codeLevel: codeLevel, codeFromScan: codeFromScan, itemCodes: itemCodes, codesDiff: codesDiff, codeText: codeText, codeRows: codeRows,
+    CODE_LEVELS: CODE_LEVELS, CODES_HEAD: CODES_HEAD, codeFormat: codeFormat, codeLevel: codeLevel, codeFields: codeFields, codeFieldsText: codeFieldsText, codeFromScan: codeFromScan, itemCodes: itemCodes, codesClean: codesClean, codesDiff: codesDiff, codeText: codeText, codeRows: codeRows,
     computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
     parseGS1: parseGS1, gs1Date: gs1Date, gtin14: gtin14, gtinValid: gtinValid, upcEtoA: upcEtoA, scanCode: scanCode, lookAlike: lookAlike, scanNeeded: scanNeeded, isStat: isStat, settingsFacts: settingsFacts, settingsFirstRead: settingsFirstRead, diffWords: diffWords, markDiff: markDiff, gtinFind: gtinFind, unknownAdd: unknownAdd, unknownRows: unknownRows, UNKNOWN_HEAD: UNKNOWN_HEAD, gtinApply: gtinApply, scanQty: scanQty, teachMerge: teachMerge, teachPending: teachPending,keypadStep: keypadStep, oneDecimal: oneDecimal, updateStep: updateStep,queueRecord: queueRecord, queueItem: queueItem, mergeQueue: mergeQueue, normalizeSettings: normalizeSettings, settingsRisk: settingsRisk, SETTINGS_DEFAULTS: SETTINGS_DEFAULTS,
     slipHTML: slipHTML, SLIP_CSS: SLIP_CSS, fmtDate: fmtDate, addressText: addressText,
@@ -5200,13 +5276,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "2359e74585";
+var BUILD = "7b09d618c9";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.1 · 10 Nov 2026";
+var VERSION = "1.4.2 · 10 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -7371,9 +7447,11 @@ function expRow(id) {
 }
 
 /* product codes of one item (John, 10 Nov): Jackson scans the barcodes and QR codes printed on the product from its item sheet
-   (Stock) or its edit sheet (Settings). What each code holds is kept as read, with what it was on (each / pack / case), saved as
-   a stock-log entry with no quantities (as Mark ordered and the expiration dates are). The row and the sheet follow the
-   expiration dates' row and sheet. */
+   (Stock) or its edit sheet (Settings). What each code holds is kept as read, with what it was on (each / pack / case) and a
+   note, saved as a stock-log entry with no quantities (as Mark ordered and the expiration dates are). The row and the sheet
+   follow the expiration dates' row and sheet. Loose on purpose (John, 10 Nov, "make it easy to edit and be loose so we can
+   easily capture all the data available"): the code's text and the note are fields, a code can be typed in, and nothing is
+   refused for its form. */
 var CODES = null, CAPTURE = null;   // CODES: the sheet's working list; CAPTURE: the camera is reading codes for this item (app5.js)
 function codesAll() { return C.itemCodes(values(S.logs)); }
 function codeRow(id) {
@@ -7382,26 +7460,39 @@ function codeRow(id) {
     (d.length ? d.slice(0, 3).map(function (c) { return '<span class="pill">' + esc(c.g || cut(C.codeText(c), 22)) + "</span>"; }).join(" ") + (d.length > 3 ? ' <span class="pill">+' + (d.length - 3) + "</span>" : "") : '<span class="dim">none on file</span>') +
     '<button class="btn sm" data-act="codeEdit" data-id="' + esc(id) + '">' + (d.length ? "Change codes" : "Add a code") + "</button></div>";
 }
+// the code's text in its field: the separator inside a GS1 code (it has no shape of its own) shows as ␝ and goes back as it was
+function codeShow(r) { return String(r || "").replace(/\x1d/g, "␝").replace(/[\x00-\x1f]/g, " "); }
+function codeSub(c) { return [C.codeFormat(c.f), C.codeFieldsText(c)].filter(Boolean).join(" · "); }   // "Data Matrix · GTIN … · Expiry … · Lot …"
 function codeSheet() {
-  var x = CODES, it = itemOf(x.id);
+  var x = CODES, it = itemOf(x.id), focus = x.focus; x.focus = null;
   var rows = x.work.map(function (c, k) {
-    return '<div class="sug"><div class="what" style="overflow-wrap:anywhere"><b>' + esc(cut(C.codeText(c), 120)) + "</b><small>" + esc(C.codeFormat(c.f)) + "</small></div>" +
+    return '<div class="sug code"><div class="what" style="flex-basis:100%"><input type="text" class="codeR" aria-label="Code" placeholder="Code" value="' + esc(codeShow(c.r)) + '" data-in="codeR" data-k="' + k + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"' + (focus === k ? " autofocus" : "") + '>' +
+      '<small id="codeF' + k + '" style="overflow-wrap:anywhere">' + esc(codeSub(c)) + "</small></div>" +
+      '<input type="text" class="codeN" aria-label="Note" placeholder="Note" value="' + esc(c.nt || "") + '" data-in="codeN" data-k="' + k + '" autocomplete="off" style="flex:1;min-width:160px">' +
       uiSeg(C.CODE_LEVELS, c.lv || "", "codeLv", { attrs: ' data-k="' + k + '"', label: "Code is on" }) + '<button class="btn sm" data-act="codeDel" data-k="' + k + '">Remove</button></div>';
   }).join("");
   openSheet("Product codes: " + it.n,
     '<div class="sugs" style="margin:0">' + (rows || '<p class="dim" style="margin:0">No codes.</p>') + "</div>" +
-    '<div class="row"><button class="btn" data-act="codeScan">' + IC.scan + "Scan</button></div>",
-    '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="codeSave">Save</button>');
+    '<div class="row"><button class="btn" data-act="codeScan">' + IC.scan + 'Scan</button><button class="btn" data-act="codeType">Type one in</button></div>',
+    '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="codeSave">Save</button>', true);
   sheetTyped = !!C.codesDiff(x.was, x.work);   // codes not saved yet: a tap beside the sheet doesn't drop them
 }
 ACT.codeEdit = function (el) {
   var id = el.getAttribute("data-id"); if (!itemOf(id)) return;
   var was = codesAll()[id] || [];
-  CODES = { id: id, was: was, work: JSON.parse(JSON.stringify(was)) };
+  CODES = { id: id, was: was, work: was.map(function (c) { return { r: c.r, f: c.f, lv: c.lv, nt: c.nt || "" }; }) };
   codeSheet();
 };
+// the code's text and its note are typed straight into the list; what the app reads out of the text follows as it is typed
+IN.codeR = function (el) {
+  var k = +el.getAttribute("data-k"), c = CODES && CODES.work[k]; if (!c) return;
+  c.r = el.value.replace(/␝/g, "\x1d");
+  var sub = document.getElementById("codeF" + k); if (sub) sub.textContent = codeSub(c);
+};
+IN.codeN = function (el) { var c = CODES && CODES.work[+el.getAttribute("data-k")]; if (c) c.nt = el.value; };
 ACT.codeLv = function (el) { var c = CODES && CODES.work[+el.getAttribute("data-k")]; if (!c) return; var v = el.getAttribute("data-v"); c.lv = c.lv === v ? "" : v; codeSheet(); };   // a second tap takes the answer off
 ACT.codeDel = function (el) { if (!CODES) return; CODES.work.splice(+el.getAttribute("data-k"), 1); codeSheet(); };
+ACT.codeType = function () { if (!CODES) return; CODES.work.push({ r: "", f: "typed", lv: "", nt: "" }); CODES.focus = CODES.work.length - 1; codeSheet(); };   // a code that won't scan, or what is printed beside it
 ACT.codeScan = function () {
   var x = CODES; if (!x) return;
   closeSheet(); CAPTURE = { id: x.id };
@@ -7410,11 +7501,11 @@ ACT.codeScan = function () {
 };
 ACT.codeSave = function () {
   var x = CODES; closeSheet(); CODES = null; if (!x) return;
-  var diff = C.codesDiff(x.was, x.work);
+  var diff = C.codesDiff(x.was, x.work), n = C.codesClean(x.work).length;
   if (!diff) { toast("No change"); return; }
   var it = itemOf(x.id), codes = {}; codes[x.id] = diff;
-  saveLog(newLog("Adjustment", { notes: "Product codes: " + it.n + " — " + (x.work.length ? x.work.length + (x.work.length === 1 ? " code" : " codes") : "none"), lines: [], codes: codes }));
-  toast(x.work.length ? "Product codes saved" : "Product codes taken off"); render.keepScroll = true; render();
+  saveLog(newLog("Adjustment", { notes: "Product codes: " + it.n + " — " + (n ? n + (n === 1 ? " code" : " codes") : "none"), lines: [], codes: codes }));
+  toast(n ? "Product codes saved" : "Product codes taken off"); render.keepScroll = true; render();
 };
 ACT.xlCodes = function () { xlDownload("product_codes_" + today() + ".xlsx", "Codes", C.CODES_HEAD, C.codeRows(codesAll(), CAT.list)); };
 
@@ -7880,7 +7971,7 @@ ACT.xlMenu = function () {
     '<button class="res" data-act="xlTemplate"><span class="nm">Count template<small>Every item in pick order with its bin count, what the app shows now and its expiration dates, to count on paper or in Excel and upload back</small></span></button>' +
     '<button class="res" data-act="xlSlips"><span class="nm">Packing history<small>Every item sent on every slip: date, slip, order, ship-to, ordered, sent, short reason, boxes, packer (last ' + KEEP.slips + " days)</small></span></button>" +
     '<button class="res" data-act="xlLogs"><span class="nm">Stock log<small>Every delivery, count, adjustment and expiration date, item by item (last ' + KEEP.logs + " days)</small></span></button>" +
-    '<button class="res" data-act="xlCodes"><span class="nm">Product codes<small>Every code scanned on an item: item, vendor number, the code as read, its type, GTIN, lot, expiry, each / pack / case, who and when</small></span></button>' +
+    '<button class="res" data-act="xlCodes"><span class="nm">Product codes<small>Every code scanned or typed on an item: item, vendor number, the code as read, its type, each / pack / case, the note, GTIN, lot, expiry, serial, catalog number, everything else in the code, who and when</small></span></button>' +
     '<div class="muted" style="font-size:var(--fs-13);font-weight:700;margin-top:var(--sp-1-5)">Upload</div>' +
     '<button class="res" data-act="xlUpload"><span class="nm">Upload a count<small>A filled-in count template or count sheet (.xlsx or .csv). Rows left blank are skipped (a cycle count); expiration dates on it are saved too</small></span></button>', "");
 };
@@ -10188,7 +10279,8 @@ function camLoop() {
   if (!CAM.on || !CAM.stream) return;
   var v = $("#camV"), next = function () { CAM.timer = setTimeout(camLoop, 150); };
   if (!v || v.readyState < 2) { next(); return; }
-  CAM.det.detect(camBoxCanvas(v) || v).then(function (codes) { var c = codes && codes[0]; if (c && c.rawValue) camGot(c.rawValue, c.format); next(); }, next);
+  if (CAPTURE && CAM.detAll === undefined) { try { CAM.detAll = new window.BarcodeDetector(); } catch (e) { CAM.detAll = null; } }   // product codes: every kind the reader knows
+  ((CAPTURE && CAM.detAll) || CAM.det).detect(camBoxCanvas(v) || v).then(function (codes) { var c = codes && codes[0]; if (c && c.rawValue) camGot(c.rawValue, c.format); next(); }, next);
 }
 // 3.3: only the centre box is decoded - the part of the video under the on-screen frame (the square min(60vw, 50vh), the video
 // under object-fit: cover), drawn onto a canvas for the detector; while the view is pressed (CAM.zoom 2) the centre half, so
@@ -10227,15 +10319,16 @@ function camGot(raw, format) {
   camMsg((CAM.n ? CAM.n + " scanned · " + r.msg.replace(/^Not /, "not ") : r.msg), "bad"); uiBuzz();   // the running count stays in front of a failed read (review 3.3); after the count the words are lower case, as after every "·" (3.4b)
 }
 // product codes for one item (10 Nov): every code read is put on the item's list as it was read (our own labels are not a
-// product's code); the camera stays open for the next one, and Done goes back to the list, where Save keeps them
+// product's code); the camera stays open for the next one, and Done goes back to the list, where Save keeps them. Loose: every
+// kind of code the reader knows is read here (CAM.detAll), not only the kinds the other screens use.
 function captureGot(raw, format) {
-  var x = CODES, c = C.codeFromScan(raw, format);
-  var n = x ? x.work.length : 0;
+  var x = CODES, n = x ? x.work.length : 0;
+  if (String(raw || "").trim().length < 3) return;   // a stray one- or two-character read is nothing
+  var c = C.codeFromScan(raw, format);
   if (!x || !c) { camMsg(n ? n + " scanned · not a product code" : "Not a product code", "bad"); uiBuzz(); return; }
-  var sc = C.scanCode(c.r, c.f); c.lot = sc.lot || ""; c.exp = sc.exp || "";
   if (x.work.some(function (o) { return o.r === c.r; })) { camMsg(n + " scanned · already on the list", "good"); return; }
-  x.work.push(c); CAM.n = x.work.length;
-  camMsg(x.work.length + " scanned · " + cut(C.codeText(c), 60), "good");
+  x.work.push({ r: c.r, f: c.f, lv: "", nt: "" }); CAM.n = x.work.length;
+  camMsg(x.work.length + " scanned · " + cut(C.codeText(c), 70), "good");
 }
 ACT.camClose = (function (orig) { return function () { var cap = CAPTURE; CAPTURE = null; orig.apply(this, arguments); if (cap && CODES && CODES.id === cap.id) codeSheet(); }; })(ACT.camClose);   // Done: back on the item's list
 // what a code does on the screen that is open

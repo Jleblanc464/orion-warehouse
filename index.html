@@ -2284,7 +2284,7 @@ var CORE = (function () {
     return JSON.stringify(audit({ v: 1, cid: rec.cid, id: rec.cid, at: rec.at, type: rec.type, req: x.req, voids: rec.voids || undefined, reason: rec.reason || undefined, exp: expData(rec.exp),
       // a delivery checked against its slip (6 Oct): the slip's number, how it was read, pages, lines that didn't come, picks learned
       po: rec.po || undefined, src: rec.src || undefined, pages: rec.pages || undefined, miss: rec.miss && rec.miss.length ? rec.miss : undefined, learn: rec.learn && rec.learn.length ? rec.learn : undefined,
-      ordered: rec.ordered || undefined, codes: rec.codes || undefined,
+      ordered: rec.ordered || undefined, oq: rec.oq || undefined, codes: rec.codes || undefined,
       lines: rec.lines.map(function (l) { return l.at ? [l.id, round(l.each, 3), l.at] : [l.id, round(l.each, 3)]; }) }, { dev: x.dev, by: rec.by, ver: x.ver }));
   }
   // lab form AppData; x = { req, dev, ver } from the device
@@ -2342,6 +2342,7 @@ var CORE = (function () {
       // a delivery received as a checklist (6 Oct): the slip's number, how it was read, its pages, what didn't come, what was learned
       po: d.po || "", src: d.src || "", pages: num(d.pages) || 0, miss: Array.isArray(d.miss) ? d.miss : [], learn: Array.isArray(d.learn) ? d.learn : [],
       ordered: d.ordered && typeof d.ordered === "object" ? d.ordered : null,
+      oq: d.oq && typeof d.oq === "object" && !Array.isArray(d.oq) ? d.oq : null,
       codes: d.codes && typeof d.codes === "object" && !Array.isArray(d.codes) ? d.codes : null,
       lines: (d.lines || []).map(function (r) { var o = { id: r[0], each: num(r[1]) }; if (r[2]) o.at = String(r[2]); if (ID_ALIAS[o.id]) { o.aka = o.id; o.id = ID_ALIAS[o.id]; } return o; })
     };
@@ -3075,15 +3076,36 @@ var CORE = (function () {
   // weeks the stock lasts at the usage per week (pieces); null with no usage
   function weeksCover(onHand, perWeek) { return onHand == null || !(num(perWeek) > 0) ? null : Math.max(0, round(num(onHand) / num(perWeek), 1)); }
   // "Mark ordered" on a warehouse item: an Adjustment with no quantities carrying ordered {id: "YYYY-MM-DD"} ("" clears it);
-  // it stands until a delivery of the item is received on or after that day
-  function whOrdered(logs) {
-    var out = {};
-    dedupe(logs || []).slice().sort(function (a, b) { return a.at < b.at ? -1 : a.at > b.at ? 1 : 0; }).forEach(function (g) {
-      if (g.type === "Adjustment" && g.ordered) Object.keys(g.ordered).forEach(function (id) { if (g.ordered[id]) out[id] = String(g.ordered[id]); else delete out[id]; });
-      if (g.type === "Received") g.lines.forEach(function (l) { if (out[l.id] && (g.date || String(g.at).slice(0, 10)) >= out[l.id]) delete out[l.id]; });
+  // it stands until a delivery of the item is received on or after that day.
+  // With how many (John, 10 Nov: "a way for Jackson to see how many I ordered so with the receipt we can see if we were
+  // shorted"): the same entry also carries oq {id: pieces ordered}. Then the order stays open until that many pieces have
+  // come in on deliveries received on or after that day (a short delivery leaves the rest owed: "Keep it open as owed"), or
+  // until it is cleared or marked again. It can be marked from the iPad or from the dashboard's Warehouse tab.
+  // whOrderApply folds one stock-log entry into the open orders {id: {date, each, got, by, at}} (each 0 = no quantity given);
+  // the dashboard runs the same function over the entries it reads.
+  function whOrderApply(open, g) {
+    if (!g) return open;
+    if (g.type === "Adjustment" && g.ordered) Object.keys(g.ordered).forEach(function (id) {
+      if (!g.ordered[id]) { delete open[id]; return; }
+      var q = g.oq && num(g.oq[id]) > 0 ? round(num(g.oq[id]), 3) : 0;
+      open[id] = { date: String(g.ordered[id]).slice(0, 10), each: q, got: 0, by: g.by || "", at: g.at || "" };
     });
-    return out;
+    if (g.type === "Received") (g.lines || []).forEach(function (l) {
+      var o = open[l.id]; if (!o || (g.date || String(g.at).slice(0, 10)) < o.date) return;
+      if (!(o.each > 0)) { delete open[l.id]; return; }
+      o.got = round(o.got + num(l.each), 3);
+      if (o.got >= o.each) delete open[l.id];
+    });
+    return open;
   }
+  function whOrders(logs) {
+    var open = {};
+    dedupe(logs || []).slice().sort(function (a, b) { return a.at < b.at ? -1 : a.at > b.at ? 1 : 0; }).forEach(function (g) { whOrderApply(open, g); });
+    return open;
+  }
+  function whOrdered(logs) { var o = whOrders(logs), out = {}; Object.keys(o).forEach(function (id) { out[id] = o[id].date; }); return out; }   // {id: date}, as before
+  // what is still owed on an open order, in pieces (0 when no quantity was given)
+  function whOwed(o) { return o && o.each > 0 ? Math.max(0, round(o.each - (o.got || 0), 3)) : 0; }
   // the last n counts of an item, oldest first: [{at, each}]
   function countHistory(logs, id, n) {
     var out = [];
@@ -5046,7 +5068,7 @@ var CORE = (function () {
     tokens: tokens, parseQty: parseQty, toSlipUnits: toSlipUnits, parseComments: parseComments,
     slipData: slipData, readSlipData: readSlipData, audit: audit, logData: logData, labData: labData,
     CODE_LEVELS: CODE_LEVELS, CODES_HEAD: CODES_HEAD, codeFormat: codeFormat, codeLevel: codeLevel, codeFields: codeFields, codeFieldsText: codeFieldsText, codeFromScan: codeFromScan, itemCodes: itemCodes, codesClean: codesClean, codesDiff: codesDiff, codeText: codeText, codeRows: codeRows,
-    computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
+    computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, whOrders: whOrders, whOrderApply: whOrderApply, whOwed: whOwed, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
     parseGS1: parseGS1, gs1Date: gs1Date, gtin14: gtin14, gtinValid: gtinValid, upcEtoA: upcEtoA, scanCode: scanCode, lookAlike: lookAlike, scanNeeded: scanNeeded, isStat: isStat, settingsFacts: settingsFacts, settingsFirstRead: settingsFirstRead, diffWords: diffWords, markDiff: markDiff, gtinFind: gtinFind, unknownAdd: unknownAdd, unknownRows: unknownRows, UNKNOWN_HEAD: UNKNOWN_HEAD, gtinApply: gtinApply, scanQty: scanQty, teachMerge: teachMerge, teachPending: teachPending,keypadStep: keypadStep, oneDecimal: oneDecimal, updateStep: updateStep,queueRecord: queueRecord, queueItem: queueItem, mergeQueue: mergeQueue, normalizeSettings: normalizeSettings, settingsRisk: settingsRisk, SETTINGS_DEFAULTS: SETTINGS_DEFAULTS,
     slipHTML: slipHTML, SLIP_CSS: SLIP_CSS, fmtDate: fmtDate, addressText: addressText,
     ROSTER: ROST, streetKey: streetKey, orionMail: orionMail, mailTo: mailTo, nameWords: nameWords, nameScore: nameScore, rosterSite: rosterSite,
@@ -5276,13 +5298,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "7b09d618c9";
+var BUILD = "241b6df3d2";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.2 · 10 Nov 2026";
+var VERSION = "1.4.3 · 10 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -7181,7 +7203,7 @@ function logBody(rec) {
   if (rec.type === "Count") b.CountScope = rec.scope === "Full" ? "Full" : "Partial";
   return b;
 }
-function saveLog(rec) { queueWrite("logs", logBody(rec), rec); }
+function saveLog(rec) { queueWrite("logs", logBody(rec), rec); whOrdQ.c = null; }
 function newLog(type, extra) {
   var r = { cid: uid(), type: type, date: today(), by: S.packer || "", vendor: "", ref: "", notes: "", scope: "", at: new Date().toISOString(), lines: [] };
   for (var k in extra) r[k] = extra[k];
@@ -7256,17 +7278,18 @@ if (STK.f === "out" || STK.f === "min") STK.f = "order";   // the 1.3 filters Ou
 // 1.4 (ODS casing, steer 13:47): sentence case; UPPERCASE stays for overlines, column heads and the status words in chips.
 // A search looks through every item.
 function stockNeeds(st) {
-  var alert = {}, n = { order: 0, low: 0, exp: 0, none: 0, all: 0 }, need = {};
+  var alert = {}, n = { order: 0, low: 0, exp: 0, none: 0, all: 0, onord: 0 }, need = {}, ord = whOrdQ();
   expAlerts(st).forEach(function (a) { alert[a.id] = a; });
   CAT.list.forEach(function (it) {
     if (it.off) return;
     var s = C.stockStatus(it, st.items[it.id]); need[it.id] = s; n.all++;
     if (s === "order" || s === "low" || s === "none") n[s]++;
     if (alert[it.id]) n.exp++;
+    if (ord[it.id]) n.onord++;
   });
-  return { n: n, need: need, alert: alert };
+  return { n: n, need: need, alert: alert, ord: ord };
 }
-function stkFilter(nd) { return STK.f && STK.f !== "auto" ? STK.f : nd.n.order ? "order" : "all"; }
+function stkFilter(nd) { return STK.f === "onord" && !nd.n.onord ? "all" : STK.f && STK.f !== "auto" ? STK.f : nd.n.order ? "order" : "all"; }   // On order with nothing on order shows everything
 function stockRows() {
   var st = stock(), q = (STK.q || "").toLowerCase().trim(), words = q.split(/\s+/).filter(Boolean);
   var nd = stockNeeds(st), f = words.length ? "all" : stkFilter(nd);
@@ -7274,6 +7297,7 @@ function stockRows() {
     if (it.off) return false;
     if ((f === "order" || f === "low" || f === "none") && nd.need[it.id] !== f) return false;
     if (f === "exp" && !nd.alert[it.id]) return false;
+    if (f === "onord" && !nd.ord[it.id]) return false;
     if (words.length) {
       var hay = (it.n + " " + (it.l || "") + " " + C.locSpell(it.l) + " " + (it.x || []).join(" ") + " " + (it.v || "") + " " + numsHay(it) + " " + it.s).toLowerCase();
       if (!words.every(function (w) { return hay.indexOf(w) >= 0; })) return false;
@@ -7287,7 +7311,14 @@ function coverBar(r) {
   var w = r.stale ? null : C.weeksCover(r.onHand, r.last7); if (w == null) return "";
   return '<span class="cover ' + (w < 1 ? "order" : w < 3 ? "low" : "ok") + '" title="' + fmt(w) + ' weeks"><i style="width:' + Math.min(100, Math.round(w / 8 * 100)) + '%"></i></span><small class="sub2">' + fmt(w) + " wk</small>";
 }
-function whOrd() { return C.whOrdered(values(S.logs)); }
+// the open orders {id: {date, each, got, by, at}} (each 0: marked with no quantity), worked out once per draw
+function whOrdQ() { if (!whOrdQ.c) { whOrdQ.c = C.whOrders(values(S.logs)); setTimeout(function () { whOrdQ.c = null; }, 0); } return whOrdQ.c; }
+function whOrd() { var o = whOrdQ(), out = {}; Object.keys(o).forEach(function (id) { out[id] = o[id].date; }); return out; }
+// "10 cases ordered" / "2 cases owed · 8 cases in" (John, 10 Nov: Jackson sees how many were ordered, and what is still owed)
+function ordWords(it, o) {
+  if (!o || !(o.each > 0)) return "";
+  return o.got > 0 ? stockQty(it, C.whOwed(o)) + " owed · " + stockQty(it, o.got) + " in" : stockQty(it, o.each) + " ordered";
+}
 function expCell(id) {
   var d = expDatesOf(id);
   if (!d.length) return '<span class="dim">—</span>';
@@ -7300,8 +7331,8 @@ function unitSeg() {   // 1.7g (steer 18:07 A5): uiSeg, one builder; .useg stays
   return uiSeg([["ea", "Each"], ["pk", "Packs"], ["cs", "Cases"]], STK.u, "stkSet", { attrs: ' data-k="u"', cls: "useg" });
 }
 function stockTable() {
-  var d = stockRows(), st = d.st, list = d.list, f = d.f, ord = whOrd();
-  if (!list.length) return uiEmpty(IC.check, f === "exp" ? "Nothing expiring" : f === "order" ? "Nothing to order" : f === "low" ? "Nothing low" : "No items match");
+  var d = stockRows(), st = d.st, list = d.list, f = d.f, ord = whOrd(), ordQ = whOrdQ();
+  if (!list.length) return uiEmpty(IC.check, f === "exp" ? "Nothing expiring" : f === "order" ? "Nothing to order" : f === "low" ? "Nothing low" : f === "onord" ? "Nothing on order" : "No items match");
   var ex = expiry();
   // expiring: soonest first; otherwise by bin or by section
   var sorted = f === "exp" ? list.map(function (it) { return { id: it.id }; }).sort(function (a, b) { var x = ex[a.id][0], y = ex[b.id][0]; return x < y ? -1 : x > y ? 1 : 0; }) :
@@ -7319,7 +7350,7 @@ function stockTable() {
     var s = C.stockStatus(it, r, ord[it.id]);
     rows += '<tr class="click" data-act="itemSheet" data-id="' + esc(it.id) + '"><td>' + locChip(it.l) + "</td>" +
       '<td><button class="tcell" data-act="itemSheet" data-id="' + esc(it.id) + '"><b>' + esc(it.n) + "</b>" + (C.belowMin(it, r.onHand) ? " " + uiChip("order", { word: "Below minimum" }) : "") + '<small class="sub2">' + esc(unitLine(it)) + "</small>" + numsLine(it, "small") + "</button></td>" +
-      '<td class="r">' + oh + "</td><td>" + uiChip(s, { date: ord[it.id] ? C.labelDate(ord[it.id]) : "" }) + "</td>" +
+      '<td class="r">' + oh + "</td><td>" + uiChip(s, { date: ord[it.id] ? C.labelDate(ord[it.id]) : "" }) + (ordWords(it, ordQ[it.id]) ? '<small class="sub2 ordq">' + esc(ordWords(it, ordQ[it.id])) + "</small>" : "") + "</td>" +
       "<td>" + expCell(it.id) + "</td></tr>";
   });
   return '<div class="tw"><table class="t stk"><thead><tr><th>Bin</th><th>Item</th><th class="r">On hand</th><th>Status</th><th>Expires</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
@@ -7335,7 +7366,7 @@ function renderStock() {
   last = C.lastCountAt(values(S.logs)) || last;   // the latest full, area or uploaded count, not a one-item recount
   var seg = function (key, opts) { return uiSeg(opts, STK[key], "stkSet", { attrs: ' data-k="' + key + '"' }); };   // 1.7g: uiSeg
   var nd = stockNeeds(st), f = stkFilter(nd);
-  var chips = '<div class="fchips" role="group" aria-label="Show">' + [["order", "Order", nd.n.order], ["low", "Low", nd.n.low], ["exp", "Expiring", nd.n.exp], ["none", "Not counted", nd.n.none], ["all", "All", null]].map(function (o) {
+  var chips = '<div class="fchips" role="group" aria-label="Show">' + [["order", "Order", nd.n.order], ["low", "Low", nd.n.low], ["exp", "Expiring", nd.n.exp], ["none", "Not counted", nd.n.none]].concat(nd.n.onord ? [["onord", "On order", nd.n.onord]] : [], [["all", "All", null]]).map(function (o) {
     return '<button class="fchip ' + o[0] + '" data-act="stkSet" data-k="f" data-v="' + o[0] + '" aria-pressed="' + (f === o[0]) + '">' + o[1] + (o[2] != null ? " (" + o[2] + ")" : "") + "</button>";
   }).join("") + "</div>";
   return uiAppBar({ title: "Stock", sub: counted + " of " + items.length + " counted" + (out ? " · " + out + " out" : "") + (last ? " · last count " + esc(C.fmtDate(dayOf(last))) : ""), actions: unitSeg() +
@@ -7399,7 +7430,7 @@ ACT.itemSheet = function (el) {
     (pts ? '<svg class="spark" viewBox="-2 -2 164 40" width="164" height="40" role="img" aria-label="' + esc(counts.map(function (c) { return stockQty(it, c.each); }).join(", ")) + '"><polyline points="' + pts + '"/></svg>' : '<b>' + (counts.length ? esc(stockQty(it, counts[0].each)) : "—") + "</b>") + "</div>" +
     '<div><span class="k">Used per week</span><b>' + esc(stockQty(it, usageWeek(id))) + "</b></div>" +
     '<div><span class="k">Minimum</span><b>' + (it.min > 0 ? esc(stockQty(it, it.min)) : "—") + "</b></div>" +
-    '<div><span class="k">Ordered</span>' + (ordAt ? uiChip("ordered", { date: C.labelDate(ordAt) }) : "<b>—</b>") + "</div></div>";
+    '<div><span class="k">Ordered</span>' + (ordAt ? uiChip("ordered", { date: C.labelDate(ordAt) }) + (ordWords(it, whOrdQ()[id]) ? '<small class="sub2 ordq">' + esc(ordWords(it, whOrdQ()[id])) + "</small>" : "") : "<b>—</b>") + "</div></div>";
   openSheet(it.n, '<div class="row" style="gap:var(--sp-2)">' + locChip(it.l) +
     '<span class="pill">' + esc(it.s) + '</span><span class="pill">' + esc(C.unitLabel(it)) + "</span>" + (it.v ? '<span class="pill">' + esc(it.v) + (it.vi ? " · " + esc(it.vi) : "") + "</span>" : "") + '<div class="grow"></div>' + unitSeg() + "</div>" +
     (it.l ? '<p class="locfull">' + esc(C.locSpell(it.l)) + "</p>" : "") + binLine(it, r) +
@@ -7415,9 +7446,22 @@ function usageWeek(id) {
   return C.round(n / 4, 1);
 }
 // Mark ordered (9.5): an Adjustment with no quantities, ordered {id: date}; it stands until a delivery of the item comes in
+// the units an order is written in: cases when the item has a case size, its slip unit, pieces
+function ordUnits(it) {
+  var u = [];
+  if (it.c > 0) u.push([it.c, "Cases of " + fmt(it.c)]);
+  if ((it.p || 1) > 1 && it.p !== it.c) u.push([it.p, C.unitLabel(it).replace(/^(\w+) of/, function (m, w) { return (w === "Box" ? "Boxes" : w + "s") + " of"; })]);
+  u.push([1, (it.p || 1) > 1 || it.c > 0 ? "Pieces" : it.u === "EACH" ? "Pieces" : C.unitWord(it, 2).charAt(0).toUpperCase() + C.unitWord(it, 2).slice(1)]);
+  return u;
+}
 ACT.whOrd = function (el) {
-  var id = el.getAttribute("data-id"), it = itemOf(id), was = whOrd()[id] || ""; if (!it) return;
-  openSheet(it.n, '<label class="f">Ordered on<input id="whOrdDate" type="date" value="' + esc(was || today()) + '"></label>',
+  var id = el.getAttribute("data-id"), it = itemOf(id), o = whOrdQ()[id] || null, was = o ? o.date : ""; if (!it) return;
+  var units = ordUnits(it), per = units[0][0], q = "";
+  if (o && o.each > 0) { per = (units.filter(function (u) { return o.each % u[0] === 0; })[0] || units[units.length - 1])[0]; q = C.round(o.each / per, 3); }
+  openSheet(it.n, '<div class="grid2"><label class="f">Ordered on<input id="whOrdDate" type="date" value="' + esc(was || today()) + '"></label>' +
+    '<label class="f">How many<input id="whOrdQty" type="number" enterkeyhint="done" inputmode="decimal" min="0" step="any" value="' + esc(q) + '"></label>' +
+    '<label class="f">In<select id="whOrdPer">' + units.map(function (u) { return '<option value="' + u[0] + '"' + (u[0] === per ? " selected" : "") + ">" + esc(u[1]) + "</option>"; }).join("") + "</select></label></div>" +
+    (o && o.got > 0 ? '<p class="muted" style="margin:0">' + esc(ordWords(it, o)) + "</p>" : ""),
     '<button class="btn" data-act="closeSheet">Cancel</button>' + (was ? '<button class="btn" data-act="whOrdGo" data-id="' + esc(id) + '" data-clear="1">Clear</button>' : "") +
     '<button class="btn primary" data-act="whOrdGo" data-id="' + esc(id) + '">Save</button>');
 };
@@ -7425,9 +7469,11 @@ ACT.whOrdGo = function (el) {
   var id = el.getAttribute("data-id"), it = itemOf(id), clear = !!el.getAttribute("data-clear"), d = clear ? "" : ($("#whOrdDate").value || "");
   if (!it) return;
   if (!d && !clear) { toast("Enter the date"); return; }
+  var each = clear ? 0 : C.round((Number(($("#whOrdQty") || {}).value) || 0) * (Number(($("#whOrdPer") || {}).value) || 1), 3);
+  if (each < 0) { toast("Enter how many"); return; }
   closeSheet();
-  var o = {}; o[id] = d;
-  saveLog(newLog("Adjustment", { notes: d ? "Ordered: " + it.n + " · " + C.fmtDate(d) : "Ordered: " + it.n + " · cleared", lines: [], ordered: o }));
+  var o = {}, oq = {}; o[id] = d; if (each > 0) oq[id] = each;
+  saveLog(newLog("Adjustment", { notes: d ? "Ordered: " + it.n + (each > 0 ? " · " + C.qtyIn(it, each, it.c > 0 && each % it.c === 0 ? "cs" : "pk") : "") + " · " + C.fmtDate(d) : "Ordered: " + it.n + " · cleared", lines: [], ordered: o, oq: each > 0 ? oq : undefined }));
   toast(d ? "Ordered " + C.labelDate(d) : "Cleared"); render.keepScroll = true; render();
 };
 
@@ -8239,6 +8285,14 @@ function takeScan(out, src, ocr) {
 // the slip's own figure as read ("2 cases = 20 boxes"); the warehouse side in the unit the Each · Packs · Cases control picks
 function recvQty(l) { var it = itemOf(l.id), t = C.recvQtyText(it, l.vendorQty, l.uom, l.each), k = t.lastIndexOf(" = "); return STK.u === "pk" || !t ? t : (k >= 0 ? t.slice(0, k + 3) : "") + stockQty(it, l.each); }
 function recvGotText(l) { var it = itemOf(l.id), t = C.recvQtyText(it, null, "", l.got); return STK.u === "pk" || !t ? t : stockQty(it, l.got); }
+// what was ordered, on the delivery's line (John, 10 Nov): "ORDERED 10 cases", and once the line is checked or typed, what is
+// still owed after this delivery - the receipt shows a short order at a glance
+function recvOrdered(l, it) {
+  var o = whOrdQ()[l.id]; if (!o || !(o.each > 0)) return "";
+  var owed = C.whOwed(o), got = l.st ? lineEach(l) : l.each, left = C.round(owed - (got || 0), 3);
+  return '<div class="why chipstate">' + uiChip("ordered", { word: "ORDERED " + stockQty(it, owed) + (o.got > 0 ? " still owed" : "") }) +
+    (got > 0 && left > 0 ? uiChip("short", { word: "SHORT " + stockQty(it, left) }) : got > 0 && left < 0 ? uiChip("over", { word: "OVER " + stockQty(it, -left) }) : got > 0 ? uiChip("ok", { word: "MATCH" }) : "") + "</div>";
+}
 function recvLineHTML(l, i) {
   var it = itemOf(l.id); if (!it) return "";
   var cls = l.st === "ok" || l.st === "extra" ? " picked" : l.st === "short" || l.st === "damaged" || l.st === "miss" || l.flag && !l.st ? " short" : "";
@@ -8255,7 +8309,8 @@ function recvLineHTML(l, i) {
   else if (l.st === "miss") state = stc("none", "Not arrived");
   else if (l.st === "wrong") state = stc("none", "Wrong item · " + recvGotText(l) + " of " + it.n + " came");
   else if (l.flag && !l.st) state = '<div class="why">' + esc(l.why) + (l.text ? "<small>“" + esc(l.text) + "”</small>" : "") + "</div>";
-  if (l.how === "picked") state += stc("ok", "Remembered for next time");   // steer 18:25 #1: the pick is kept for the next slip with this line (rememberPick)
+  if (l.how === "picked") state += stc("ok", "Remembered for next time");
+  state += recvOrdered(l, it);   // steer 18:25 #1: the pick is kept for the next slip with this line (rememberPick)
   // Received as a big number (what goes into stock, or what the slip lists until checked) with ✓ MATCH / ▲ SHORT n / ● OVER n
   var gotE = l.st ? lineEach(l) : l.each, m = l.st && l.st !== "wrong" && l.src !== "hand" ? C.recvMatch(l.each, lineEach(l)) : null;
   var big = l.st || gotE > 0 ? '<div class="rcgot"><span class="n">' + esc(stockQty(it, gotE || 0)) + "</span>" + (m ? uiChip(m.kind, { n: m.n ? stockQty(it, m.n) : "" }) : "") + "</div>" : "";

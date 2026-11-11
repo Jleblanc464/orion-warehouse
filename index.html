@@ -3940,10 +3940,16 @@ var CORE = (function () {
   var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   function longDate(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); if (!m) return String(iso || ""); var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return DAYS[d.getUTCDay()] + ", " + MONTHS[d.getUTCMonth()] + " " + d.getUTCDate(); }
-  // the email's text (John, 5 Oct): the order was fulfilled (no date: the email's own date says when), what wasn't sent and
-  // why, anything shipped direct, and the packer's email note (slip.mailNote: email only, never printed). The slip's printed
-  // Notes aren't emailed. opts.other = a site that isn't on the stock-control dashboard (Settings "On: all sites"): only that
-  // the order was fulfilled and goes by courier, what wasn't sent and why, and the note.
+  // the email's text (John, 5 Oct): the order was fulfilled (no date in that line: the email's own date says when), what
+  // wasn't sent and why, anything shipped direct, and the packer's email note (slip.mailNote: email only, never printed).
+  // The slip's printed Notes aren't emailed. opts.other = a site that isn't on the stock-control dashboard (Settings
+  // "On: all sites"): fulfilled and goes by courier, no shipped-direct list (a direct line is listed as not sent, with why).
+  // 11 Nov (John: "we want the response email to include a copy of packing slip", in the email itself): after the opening
+  // line a PACKING SLIP block - the packed date (never the packer's name: John, 11 Nov, "take out jackson part"), the
+  // ship-to, every line that was sent in the slip's own words ("2 boxes of 200"), then what wasn't sent - and the email
+  // ends with the supplies mailbox (John, 11 Nov: supplies@ everywhere).
+  var SUPPLY_MAIL = "supplies@orion.healthcare";
+  function medDate(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? MONTHS[+m[2] - 1].slice(0, 3) + " " + (+m[3]) + ", " + m[1] : clean(iso); }
   function siteMessage(slip, cat, siteName, opts) {
     cat = cat || buildCatalog({}); opts = opts || {};
     var q = function (n) { return (Math.round(n * 100) / 100).toLocaleString("en-US"); };
@@ -3952,6 +3958,7 @@ var CORE = (function () {
     // "3 packs of 30" (John, 5 Oct), in the pack size the slip recorded; free-text lines keep their own unit
     var qu = function (l, n) { var it = l.id ? cat.byId[l.id] : null; return it ? qtyText(it, n, l.p) : q(n) + (l.unit ? " " + l.unit : ""); };
     var short = rows.filter(function (l) { return shortOf(l) > 0; }), direct = rows.filter(function (l) { return directOf(l) > 0; });
+    var sent = rows.filter(function (l) { return num(l.sent) > 0; });
     var b = Math.max(1, Math.round(num(slip.boxes) || 1)), out, notSent = [];
     short.forEach(function (l) { var w = clean(l.note).toLowerCase(); notSent.push("- " + nm(l) + ": " + qu(l, num(l.ordered) - num(l.sent)) + " (" + (WHY_SITE[w] || w) + ")"); });
     // other sites get no shipped-direct list, so a direct line is listed as not in the box, with why
@@ -3959,9 +3966,16 @@ var CORE = (function () {
     if (opts.other) out = [(slip.follow ? "The backordered items from your order #" + slip.order + " have" : "Your order #" + slip.order + " has") + " been fulfilled and will be delivered by a courier."];
     else out = [(slip.follow ? "The backordered items from order #" + slip.order + " for " + siteName + " have" : "Order #" + slip.order + " for " + siteName + " has") +
       " been fulfilled (" + b + (b === 1 ? " box" : " boxes") + ")."];
+    // the copy of the packing slip, without the packer's name
+    var packed = medDate(slip.shipDate), shipTo = [clean(slip.shipTo), clean(slip.address)].filter(function (x) { return x; }).join(", ");
+    out.push("", "PACKING SLIP");
+    if (packed) out.push("Packed " + packed);
+    if (shipTo) out.push("Ship to: " + shipTo);
+    if (sent.length) { out.push("", "Sent:"); sent.forEach(function (l) { out.push("- " + nm(l) + ": " + qu(l, num(l.sent))); }); }
     if (notSent.length) out = out.concat(["", slip.follow ? "Still not sent:" : "Not sent:"], notSent);
     if (direct.length && !opts.other) { out.push("", "Shipped direct (comes separately):"); direct.forEach(function (l) { out.push("- " + nm(l) + ": " + qu(l, directOf(l))); }); }
     if (clean(slip.mailNote)) out.push("", "Note from the warehouse: " + clean(slip.mailNote));
+    out.push("", "Questions: " + SUPPLY_MAIL);
     return out.join("\n");
   }
 
@@ -4011,7 +4025,7 @@ var CORE = (function () {
       (dash ? '<div class="ps-tail"><h2>Short, missing or damaged items</h2>' +
         '<table class="ps-sh"><thead><tr><th>Item</th><th>Issue</th><th class="ps-q">Qty</th><th>Noted by / notes</th></tr></thead><tbody>' + shortRows + blank + "</tbody></table>" +
         '<table class="ps-sign"><tr><td>Received by</td><td class="ps-ln"></td><td>Date</td><td class="ps-ln ps-sm"></td></tr></table>' +
-        '<p class="ps-foot">Check each item against this slip. If anything is missing or damaged, contact <b>orders@orion.healthcare</b>.</p></div>' :
+        '<p class="ps-foot">Check each item against this slip. If anything is missing or damaged, contact <b>supplies@orion.healthcare</b>.</p></div>' :
         shortRows ? '<div class="ps-tail"><h2>Short items</h2><table class="ps-sh"><thead><tr><th>Item</th><th>Issue</th><th class="ps-q">Qty</th></tr></thead><tbody>' + shortRows + "</tbody></table></div>" : "") +
       "</article>";
   }
@@ -5298,13 +5312,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "241b6df3d2";
+var BUILD = "9c80c77d48";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.3 · 10 Nov 2026";
+var VERSION = "1.4.4 · 11 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -7060,8 +7074,10 @@ function siteMail(r) {
   if (!siteEmailOn() || !r || !r.order || (r.type && r.type !== "Packed")) return null;
   var site = C.rosterSite({ practice: r.shipTo, address: r.address, email: r.email }) || (r.typed ? C.rosterSite({ practice: r.typed.n, address: r.typed.a, email: r.email }) : null), to = C.mailTo(r.email);
   if (!to) return null;
-  // "On: all sites" (John, 5 Oct): a site that isn't on the dashboard gets the shorter email
-  return site ? { to: to, site: site.n } : SET.siteEmail === "all" ? { to: to, site: r.shipTo || "", other: true } : null;
+  // "On: all sites" (John, 5 Oct): a site that isn't on the dashboard gets the shorter email. The email names the ship-to the
+  // slip and the box labels carry (11 Nov): several roster sites can share a street, and the roster's name for the best
+  // match there can be a neighbour's
+  return site ? { to: to, site: r.shipTo || site.n } : SET.siteEmail === "all" ? { to: to, site: r.shipTo || "", other: true } : null;
 }
 function slipBody(r) {
   var items = r.lines.filter(function (l) { return C.num(l.ordered) > 0 || C.num(l.sent) > 0 || r.type !== "Packed"; }).map(function (l) {

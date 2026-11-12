@@ -3106,6 +3106,45 @@ var CORE = (function () {
   function whOrdered(logs) { var o = whOrders(logs), out = {}; Object.keys(o).forEach(function (id) { out[id] = o[id].date; }); return out; }   // {id: date}, as before
   // what is still owed on an open order, in pieces (0 when no quantity was given)
   function whOwed(o) { return o && o.each > 0 ? Math.max(0, round(o.each - (o.got || 0), 3)) : 0; }
+  // The Operations Center (12 Nov): the warehouse's stock as the Hub's stock address takes it (hub/README.md in the source repo) -
+  // every item that isn't hidden, on hand in pieces and in the warehouse's words, what is marked ordered, the newest counts, and
+  // what came, went and was adjusted. st = the device's own stock (computeStock, with a stale count already blanked).
+  var HUB_COUNTS = 15, HUB_MOVES = 250;   // kept small: the Hub reads the whole thing each time it is sent
+  function hubAddrOk(s) { return /^https:\/\/[a-z0-9.-]+\/in\/stock\/[0-9a-f]{16,}$/i.test(clean(s)); }
+  function hubSection(l) { var s = clean(l), m = /^R(\d+)/i.exec(s); return m ? "Row " + m[1] : (s.split(/[\s\/]/)[0] || ""); }
+  function hubRef(s) { return clean(s).replace(/#/g, "").slice(0, 60); }   // a "#number" in a reference would tie that supply order to the warehouse
+  function hubStock(cat, st, slips, logs) {
+    slips = dedupe(slips || []).map(aliasSlip); logs = dedupe(logs || []).map(aliasLog);
+    var open = whOrders(logs), newest = function (a, b) { return a.at < b.at ? 1 : a.at > b.at ? -1 : 0; };
+    var sum = function (list, each) { var o = {}; (list || []).forEach(function (l) { if (l.id && cat.byId[l.id]) o[l.id] = round((o[l.id] || 0) + each(l), 3); }); return o; };
+    var pieces = function (l) { return num(l.each); };
+    var items = cat.list.filter(function (it) { return !it.off; }).map(function (it) {
+      var r = st.items[it.id], o = open[it.id], x = { id: it.id, name: it.n, section: hubSection(it.l), unit: it.u || "EACH", pack: it.p || 1, spot: it.l || "" };
+      if (r && r.onHand != null) {
+        x.qty = r.onHand; x.text = eachText(it, r.onHand); x.counted_at = r.baseAt;
+        x.state = r.onHand <= 0 ? "out" : stockStatus(it, r, false) === "ok" ? "ok" : "low";
+      }
+      if (o) { x.ordered_at = o.date; if (o.each > 0) { x.ordered = o.each; x.on_way = whOwed(o); x.way_text = eachText(it, whOwed(o)); } }
+      return x;
+    });
+    var counted = logs.filter(function (g) { return g.type === "Count"; }).sort(newest);
+    var full = counted.filter(function (g) { return g.scope === "Full"; })[0] || counted[0];
+    var moves = [];
+    logs.forEach(function (g) {
+      if (g.type === "Received") moves.push({ at: g.at, what: "received", ref: hubRef([g.vendor, g.ref || g.po].filter(Boolean).join(" ")) || "Delivery", lines: sum(g.lines, pieces) });
+      else if (g.type === "Adjustment" && g.ordered) {
+        var m = {};
+        Object.keys(g.ordered).forEach(function (id) { if (g.ordered[id] && cat.byId[id]) m[id] = g.oq && num(g.oq[id]) > 0 ? num(g.oq[id]) : 0; });
+        moves.push({ at: g.at, what: "ordered", ref: "Marked ordered", lines: m });
+      } else if (g.type === "Adjustment") moves.push({ at: g.at, what: "adjusted", ref: hubRef(g.reason) || "Adjustment", lines: sum(g.lines, pieces) });
+    });
+    slips.forEach(function (s) {
+      if (s.type === "Packed" && !st.voided[s.num]) moves.push({ at: s.at, what: "sent", ref: "Slip" + (s.num ? " " + s.num : ""), lines: sum(s.lines, function (l) { return slipEach(l, cat.byId[l.id]); }) });
+    });
+    return { kind: "warehouse", key: "main", name: "Warehouse", counted_at: full ? full.at : "", by: full ? full.by || "" : "", items: items,
+      counts: counted.slice(0, HUB_COUNTS).map(function (g) { return { at: g.at, by: g.by || "", ref: "Count" + (g.num ? " " + g.num : ""), note: g.scope === "Full" ? "Full" : "Partial", lines: sum(g.lines, pieces) }; }),
+      moves: moves.filter(function (m) { return Object.keys(m.lines).length; }).sort(newest).slice(0, HUB_MOVES) };
+  }
   // the last n counts of an item, oldest first: [{at, each}]
   function countHistory(logs, id, n) {
     var out = [];
@@ -5082,7 +5121,7 @@ var CORE = (function () {
     tokens: tokens, parseQty: parseQty, toSlipUnits: toSlipUnits, parseComments: parseComments,
     slipData: slipData, readSlipData: readSlipData, audit: audit, logData: logData, labData: labData,
     CODE_LEVELS: CODE_LEVELS, CODES_HEAD: CODES_HEAD, codeFormat: codeFormat, codeLevel: codeLevel, codeFields: codeFields, codeFieldsText: codeFieldsText, codeFromScan: codeFromScan, itemCodes: itemCodes, codesClean: codesClean, codesDiff: codesDiff, codeText: codeText, codeRows: codeRows,
-    computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, whOrders: whOrders, whOrderApply: whOrderApply, whOwed: whOwed, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
+    computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, whOrders: whOrders, whOrderApply: whOrderApply, whOwed: whOwed, hubStock: hubStock, hubAddrOk: hubAddrOk, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
     parseGS1: parseGS1, gs1Date: gs1Date, gtin14: gtin14, gtinValid: gtinValid, upcEtoA: upcEtoA, scanCode: scanCode, lookAlike: lookAlike, scanNeeded: scanNeeded, isStat: isStat, settingsFacts: settingsFacts, settingsFirstRead: settingsFirstRead, diffWords: diffWords, markDiff: markDiff, gtinFind: gtinFind, unknownAdd: unknownAdd, unknownRows: unknownRows, UNKNOWN_HEAD: UNKNOWN_HEAD, gtinApply: gtinApply, scanQty: scanQty, teachMerge: teachMerge, teachPending: teachPending,keypadStep: keypadStep, oneDecimal: oneDecimal, updateStep: updateStep,queueRecord: queueRecord, queueItem: queueItem, mergeQueue: mergeQueue, normalizeSettings: normalizeSettings, settingsRisk: settingsRisk, SETTINGS_DEFAULTS: SETTINGS_DEFAULTS,
     slipHTML: slipHTML, SLIP_CSS: SLIP_CSS, fmtDate: fmtDate, addressText: addressText,
     ROSTER: ROST, streetKey: streetKey, orionMail: orionMail, mailTo: mailTo, nameWords: nameWords, nameScore: nameScore, rosterSite: rosterSite,
@@ -5312,13 +5351,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "9c80c77d48";
+var BUILD = "e098ac316f";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.4 · 11 Nov 2026";
+var VERSION = "1.4.5 · 12 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -5735,6 +5774,7 @@ function flushOutbox() {
         var st = storeOf(item.kind);
         if (st && st["p-" + item.cid]) delete st["p-" + item.cid];
         upsert(item.kind, entry, item.kind === "settings"); dedupeStore(item.kind); persist(item.kind);   // a settings write of this device's own (a taught code) is taken (4.1)
+        if (item.kind === "slips" || item.kind === "logs") hubSoon();   // a pack, delivery, count or adjustment saved: the Operations Center gets the stock
         return next();
       }, function (e) {
         // the site-email fields aren't on the slips form yet: send this slip without them now, and stop adding them on this
@@ -5774,6 +5814,31 @@ window.addEventListener("online", function () {
 document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") flushOutbox(); });
 setInterval(function () { if (S.outbox.length) flushOutbox(); }, 60000);
 window.addEventListener("offline", function () { S.online = false; paintSync(); });
+
+/* ---------- the Operations Center (12 Nov): after each save this device sends the warehouse's stock to the stock address pasted
+   into its Settings (kept on the device like its key; nothing about it is in the code or the shared settings) ---------- */
+var HUB = { t: 0, busy: false, again: false, fails: 0 };
+function hubAddr() { return LS.get("hub", ""); }
+function hubSoon(ms) {
+  if (!hubAddr() || S.mode === "lab") return;
+  if (HUB.t) clearTimeout(HUB.t);
+  HUB.t = setTimeout(function () { HUB.t = 0; hubSend(); }, ms || 4000);   // a few saves close together go as one
+}
+function hubSend() {
+  var addr = hubAddr();
+  if (!addr) return Promise.resolve(false);
+  if (HUB.busy) { HUB.again = true; return Promise.resolve(false); }
+  HUB.busy = true;
+  var body;
+  try { body = JSON.stringify(C.hubStock(CAT, stock(), values(S.slips), values(S.logs))); } catch (e) { HUB.busy = false; return Promise.resolve(false); }
+  return fetch(addr, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body }).then(function (r) { return r.ok; }, function () { return false; }).then(function (ok) {
+    HUB.busy = false;
+    if (ok) { HUB.fails = 0; LS.set("hubAt", new Date().toISOString()); LS.del("hubErr"); } else { HUB.fails++; LS.set("hubErr", new Date().toISOString()); }
+    // not through: tried again in 5 minutes, three times; after that with the next save
+    if (HUB.again) { HUB.again = false; hubSoon(1000); } else if (!ok && HUB.fails < 4) hubSoon(5 * 60000);
+    return ok;
+  });
+}
 
 /* ---------- derived data ---------- */
 function stock() {
@@ -8920,7 +8985,7 @@ function renderSettings() {
     // the location list (John, 5 Oct): kept on this device only, so the client list isn't in the app's public files
     '<div class="locset"><div class="grow"><b>Location list</b><br><span class="muted" style="font-size:var(--fs-15)">' +
     (LOCS ? fmt(LOCS.list.length) + " locations · " + esc(LOCS.file || "the export") + " · added " + esc(when(LOCS.at)) : "Not on this iPad yet") +
-    '</span></div><button class="btn" data-act="locUpload">' + (LOCS ? "Upload a newer list" : "Upload the location list") + "</button></div></div></div>" +
+    '</span></div><button class="btn" data-act="locUpload">' + (LOCS ? "Upload a newer list" : "Upload the location list") + "</button></div>" + hubRow() + "</div></div>" +
 
     '<div class="card"><div class="ch"><h2 id="shH">Shared settings</h2><span class="muted" style="font-size:var(--fs-13)">' + (SET.when ? (S.held ? "Current · " : "Last changed ") + esc(when(SET.when)) + (SET.by ? " by " + esc(SET.by) : "") : "") + "</span></div>" +
     '<div class="cb" style="display:flex;flex-direction:column;gap:var(--sp-3)">' + heldRow() + '<div class="grid2">' +   // 4.1: a held form-32 entry first, Keep current / Use new
@@ -8947,6 +9012,26 @@ function renderSettings() {
     '<div class="card"><div class="ch"><h2>Items</h2><span class="muted" style="font-size:var(--fs-13)">' + CAT.list.length + " items" + (nOv || nAdd ? " · " + nOv + " edited, " + nAdd + " added" : "") + '</span><div class="grow"></div><button class="btn" data-act="itemAdd">+ Add item</button></div>' +
     '<div class="cb"><input type="search" id="itSearch" placeholder="Find an item" aria-label="Find an item" value="' + esc(IT.q) + '" data-in="itQ" autocomplete="off"></div><div id="itRes" class="tw">' + itemEditRows(IT.q) + "</div></div>";
 }
+// the Operations Center (12 Nov): this device's stock address, pasted from the Hub's Settings, kept on the device only and never shown again
+function hubRow() {
+  var at = LS.get("hubAt", ""), err = LS.get("hubErr", "");
+  return '<div class="locset" id="hubRow"><div class="grow"><b>Operations Center</b><br><span class="muted" style="font-size:var(--fs-15)">' +
+    (!hubAddr() ? "Stock is not sent from this iPad" : err ? "Stock not sent · tried " + esc(when(err)) : at ? "Stock sent " + esc(when(at)) : "Stock not sent yet") +
+    '</span></div><button class="btn" data-act="hubSet">' + (hubAddr() ? "Change the stock address" : "Add the stock address") + "</button></div>";
+}
+ACT.hubSet = function () {
+  openSheet("Operations Center", '<label class="f">Stock address<input id="hubIn" type="text" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></label>',
+    '<button class="btn" data-act="closeSheet">Cancel</button>' + (hubAddr() ? '<button class="btn" data-act="hubGo" data-clear="1">Remove</button>' : "") + '<button class="btn primary" data-act="hubGo">Save</button>');
+};
+ACT.hubGo = function (el) {
+  var clear = !!el.getAttribute("data-clear"), v = clear ? "" : String(($("#hubIn") || {}).value || "").trim();
+  if (!clear && !C.hubAddrOk(v)) { toast("Check the address"); return; }
+  closeSheet();
+  ["hub", "hubAt", "hubErr"].forEach(function (k) { LS.del(k); });
+  if (clear) { toast("Removed"); render.keepScroll = true; render(); return; }
+  LS.set("hub", v);
+  hubSend().then(function (ok) { toast(ok ? "Stock sent" : "Couldn’t send the stock"); if (S.tab === "settings") { render.keepScroll = true; render(); } });
+};
 function itemEditRows(q) {
   q = (q || "").toLowerCase().trim();
   var words = q.split(/\s+/).filter(Boolean);
@@ -9096,7 +9181,7 @@ ACT.disconnect = function () {
     '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn danger" data-act="disconnectYes">Disconnect</button>');
 };
 ACT.disconnectYes = function () {
-  ["key", "orders", "slips", "logs", "labs", "mode", "settingsRaw", "tokens", "hiOrder", "outbox", "draft", "recv", "count", "calls", "st.next", "st.first", "st.printed", "st.lastPrint", "settingsHeld", "settingsSeen", "settingsOwn", "labKey", "teachLocal"].forEach(function (k) { LS.del(k); });   // 4.1b: the hold and what the guard remembers go with the key
+  ["key", "orders", "slips", "logs", "labs", "mode", "settingsRaw", "tokens", "hiOrder", "outbox", "draft", "recv", "count", "calls", "st.next", "st.first", "st.printed", "st.lastPrint", "settingsHeld", "settingsSeen", "settingsOwn", "labKey", "teachLocal", "hub", "hubAt", "hubErr"].forEach(function (k) { LS.del(k); });   // 4.1b: the hold and what the guard remembers go with the key
   S.outbox = [];
   saveOutbox().then(function () { LS.del("outbox"); location.hash = ""; location.reload(); });
 };

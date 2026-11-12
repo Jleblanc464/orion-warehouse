@@ -2211,7 +2211,8 @@ var CORE = (function () {
     (pairs || []).forEach(function (p) { if (!p || p.length < 2 || !id) return; if (p[0] === id && p[1] !== id) out.push(p[1]); else if (p[1] === id && p[0] !== id) out.push(p[0]); });
     return out.filter(function (x, i) { return out.indexOf(x) === i; });
   }
-  function scanNeeded(line, pack, pairs) { return !!(line && line.id && ((pack && pack.stat) || lookAlike(pairs, line.id).length)); }
+  // (12 Nov, John: a STAT order packs like any other order - its lines no longer ask for a scan; a look-alike line asks on every order)
+  function scanNeeded(line, pack, pairs) { return !!(line && line.id && lookAlike(pairs, line.id).length); }
   // a STAT order: the word in the practice name (form 1 has no field for it); the same rule for a backorder's ship-to (3.4b)
   function isStat(text) { return /\bstat\b/i.test(String(text || "")); }
   var wordKey = function (w) { return String(w).toLowerCase().replace(/[^a-z0-9]/g, ""); };
@@ -5351,13 +5352,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "e098ac316f";
+var BUILD = "695dd631bd";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.5 · 12 Nov 2026";
+var VERSION = "1.4.6 · 12 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -5404,7 +5405,7 @@ var GTM = typeof GTIN_MAP !== "undefined" ? GTIN_MAP : null;   // the GTIN map i
 var SET = C.teachMerge(C.normalizeSettings(S.settingsRaw), C.teachPending(S.outbox.concat(LS.get("teachLocal", []))));
 var CAT = C.buildCatalog(SET, GTM);
 function refreshSettings() { SET = C.teachMerge(C.normalizeSettings(S.settingsRaw), C.teachPending(S.outbox.concat(LS.get("teachLocal", [])))); CAT = C.buildCatalog(SET, GTM); labCatRefresh(); }
-if (S.pack && !S.pack.stat && C.isStat((S.pack.typed || {}).n || S.pack.shipTo)) S.pack.stat = true;   // a draft resumed (3.4b): a STAT ship-to asks for its scans; a backorder draft from an older build carried no stat
+if (S.pack && !S.pack.stat && C.isStat((S.pack.typed || {}).n || S.pack.shipTo)) S.pack.stat = true;   // a draft resumed (3.4b): a STAT ship-to keeps its RUSH chip (12 Nov: it asks for no scans); a backorder draft from an older build carried no stat
 // the order form in use (shared setting): 1 = Order Supplies, 33 = the new order form; each keeps its own read position
 function orderForm() { return SET.orderForm === 33 ? "33" : CFG.forms.orders; }
 function tokenKey(kind) { return kind === "orders" && orderForm() !== CFG.forms.orders ? "orders" + orderForm() : kind; }
@@ -5831,9 +5832,12 @@ function hubSend() {
   HUB.busy = true;
   var body;
   try { body = JSON.stringify(C.hubStock(CAT, stock(), values(S.slips), values(S.logs))); } catch (e) { HUB.busy = false; return Promise.resolve(false); }
-  return fetch(addr, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body }).then(function (r) { return r.ok; }, function () { return false; }).then(function (ok) {
+  // 1.4.6: why a send did not go is kept for Settings - "address" (the Operations Center does not know it), "refused" (it answered no),
+  // "answer" (nothing came back: no network, or the send was cut off before an answer)
+  return fetch(addr, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body }).then(function (r) { return r.ok ? "" : r.status === 404 ? "address" : "refused"; }, function () { return "answer"; }).then(function (why) {
+    var ok = !why;
     HUB.busy = false;
-    if (ok) { HUB.fails = 0; LS.set("hubAt", new Date().toISOString()); LS.del("hubErr"); } else { HUB.fails++; LS.set("hubErr", new Date().toISOString()); }
+    if (ok) { HUB.fails = 0; LS.set("hubAt", new Date().toISOString()); LS.del("hubErr"); LS.del("hubWhy"); } else { HUB.fails++; LS.set("hubErr", new Date().toISOString()); LS.set("hubWhy", why); }
     // not through: tried again in 5 minutes, three times; after that with the next save
     if (HUB.again) { HUB.again = false; hubSoon(1000); } else if (!ok && HUB.fails < 4) hubSoon(5 * 60000);
     return ok;
@@ -6599,7 +6603,7 @@ function startPack(o, opts) {
   closeSheet(); S.view = "pack"; saveDraft(); render(); window.scrollTo(0, 0);
 }
 
-// 3.4: a look-alike or STAT line still waiting for its scan (3.4b: anything but a scan, an old "no" included, still asks and still
+// 3.4: a look-alike line still waiting for its scan (12 Nov: a STAT order's lines no longer ask) (3.4b: anything but a scan, an old "no" included, still asks and still
 // scans); a line with nothing sent (shorted to 0, or shipped direct) waits for none
 function lineUnscanned(l, p) { return C.scanNeeded(l, p, SET.pairs) && l.v !== 1 && !(l.sent != null && C.num(l.sent) === 0); }
 // the look-alike marker (law 11): the chip whenever the item has a partner in the pairs, the words that differ marked against each
@@ -6619,7 +6623,7 @@ function lineHTML(l, i, st) {
   var canDirect = packDirect(l.id), direct = short && canDirect && C.isDirect(l.note);
   var low = r && r.onHand != null && C.eachOf(it, l.sent != null ? l.sent : l.ordered) > r.onHand;
   var loc = locChip(it.l);
-  var unv = lineUnscanned(l, S.pack);   // 3.4: a look-alike or STAT line asks for a scan before it ticks
+  var unv = lineUnscanned(l, S.pack);   // 3.4: a look-alike line asks for a scan before it ticks
   var ord = C.num(l.ordered) > 0 ? '<b>' + fmt(l.ordered) + "</b>" + esc(l.id ? C.unitPer(it, l.ordered) : it.u) : '<b>—</b>not ordered';
   var editOrd = ' <button class="link" data-act="editOrdered" data-i="' + i + '" title="Change the order qty">Edit</button>';
   var sentVal = l.sent == null ? "" : String(C.round(C.num(l.sent), 3));   // a number box: no thousands comma ("1,000" would show empty)
@@ -7164,7 +7168,7 @@ ACT.submitPack = function (el, e, force) {
   if (force) p._okShort = true;
   if (!p.lines.length) { toast("Add at least one item first"); return; }
   if (locIx() && !p.loc) { locSheet(); return; }
-  // 3.4: a look-alike or STAT line sent without its scan is listed first, one answer per row as the check sheets are (3.4b: no one-tap
+  // 3.4: a look-alike line sent without its scan is listed first, one answer per row as the check sheets are (3.4b: no one-tap
   // escape); Scan opens the camera, "packed without a scan" answers that row (sx on the slip), the main button once every row is answered
   var unscanned = nscRows().filter(function (x) { return !(NSC && NSC.ok && NSC.done[x.i]); });
   if (unscanned.length && !force) { nscSheet(unscanned); return; }
@@ -8967,7 +8971,15 @@ function pairsCard() {
     '<div class="cb" style="display:flex;flex-direction:column;gap:0">' + prs.map(function (pr, k) { var a = itemOf(pr[0]), b = itemOf(pr[1]), an = a ? a.n : pr[0], bn = b ? b.n : pr[1]; return '<div class="pairrow"><span class="grow"><span class="pairname">' + C.markDiff(an, [bn]) + '</span><span class="pairname">' + C.markDiff(bn, [an]) + '</span></span><button class="btn sm" data-act="pairRemove" data-k="' + k + '" aria-label="Remove, ' + esc(an) + ' and ' + esc(bn) + '">Remove</button></div>'; }).join("") +
     '<div class="row" style="padding-top:var(--sp-3)"><button class="btn" data-act="pairAdd">+ Add a pair</button></div></div></div>';
 }
-var IT = { q: "", all: false };   // Settings → Items: the list stays folded until a search or "Show all"
+var IT = { q: "", all: false, f: "" };   // Settings → Items: the list stays folded until a search or "Show all"; f "nocode" = only the items with no product code yet (12 Nov)
+// the items still waiting for their product codes: on the list (not hidden) with none on file
+function itNoCode() { var codes = codesAll(); return CAT.list.filter(function (it) { return !it.off && !(codes[it.id] || []).length; }); }
+// the Stock tab's chips, here over the items: the ones with no product code yet (with how many), or all
+function itChips() {
+  return '<div class="fchips" role="group" aria-label="Show">' + [["nocode", "No product codes", itNoCode().length], ["", "All", null]].map(function (o) {
+    return '<button class="fchip" data-act="itSet" data-v="' + o[0] + '" aria-pressed="' + (IT.f === o[0]) + '">' + o[1] + (o[2] != null ? " (" + o[2] + ")" : "") + "</button>";
+  }).join("") + "</div>";
+}
 function hourOptions(sel, isFrom) {
   var lab = function (x) { return x === 0 ? "12 am" : x === 24 ? "midnight" : x === 12 ? "12 pm" : (x % 12) + (x < 12 ? " am" : " pm"); };
   var out = "";
@@ -9010,13 +9022,13 @@ function renderSettings() {
     '<div class="row"><button class="btn" data-act="stationHelp">Set up a print station</button><a class="btn ghost" href="#station" target="_blank" rel="noopener">Open the station screen</a></div></div></div>' +
 
     '<div class="card"><div class="ch"><h2>Items</h2><span class="muted" style="font-size:var(--fs-13)">' + CAT.list.length + " items" + (nOv || nAdd ? " · " + nOv + " edited, " + nAdd + " added" : "") + '</span><div class="grow"></div><button class="btn" data-act="itemAdd">+ Add item</button></div>' +
-    '<div class="cb"><input type="search" id="itSearch" placeholder="Find an item" aria-label="Find an item" value="' + esc(IT.q) + '" data-in="itQ" autocomplete="off"></div><div id="itRes" class="tw">' + itemEditRows(IT.q) + "</div></div>";
+    '<div class="cb" style="display:flex;flex-direction:column;gap:var(--sp-2-5)"><div id="itChips">' + itChips() + '</div><input type="search" id="itSearch" placeholder="Find an item" aria-label="Find an item" value="' + esc(IT.q) + '" data-in="itQ" autocomplete="off"></div><div id="itRes" class="tw">' + itemEditRows(IT.q) + "</div></div>";
 }
 // the Operations Center (12 Nov): this device's stock address, pasted from the Hub's Settings, kept on the device only and never shown again
 function hubRow() {
-  var at = LS.get("hubAt", ""), err = LS.get("hubErr", "");
+  var at = LS.get("hubAt", ""), err = LS.get("hubErr", ""), why = { address: " · address not right", refused: " · not taken", answer: " · no answer" }[LS.get("hubWhy", "")] || "";   // 1.4.6: why it did not go
   return '<div class="locset" id="hubRow"><div class="grow"><b>Operations Center</b><br><span class="muted" style="font-size:var(--fs-15)">' +
-    (!hubAddr() ? "Stock is not sent from this iPad" : err ? "Stock not sent · tried " + esc(when(err)) : at ? "Stock sent " + esc(when(at)) : "Stock not sent yet") +
+    (!hubAddr() ? "Stock is not sent from this iPad" : err ? "Stock not sent · tried " + esc(when(err)) + why : at ? "Stock sent " + esc(when(at)) : "Stock not sent yet") +
     '</span></div><button class="btn" data-act="hubSet">' + (hubAddr() ? "Change the stock address" : "Add the stock address") + "</button></div>";
 }
 ACT.hubSet = function () {
@@ -9027,7 +9039,8 @@ ACT.hubGo = function (el) {
   var clear = !!el.getAttribute("data-clear"), v = clear ? "" : String(($("#hubIn") || {}).value || "").trim();
   if (!clear && !C.hubAddrOk(v)) { toast("Check the address"); return; }
   closeSheet();
-  ["hub", "hubAt", "hubErr"].forEach(function (k) { LS.del(k); });
+  ["hub", "hubAt", "hubErr", "hubWhy"].forEach(function (k) { LS.del(k); });
+  HUB.fails = 0;   // a new address starts its tries afresh
   if (clear) { toast("Removed"); render.keepScroll = true; render(); return; }
   LS.set("hub", v);
   hubSend().then(function (ok) { toast(ok ? "Stock sent" : "Couldn’t send the stock"); if (S.tab === "settings") { render.keepScroll = true; render(); } });
@@ -9035,12 +9048,16 @@ ACT.hubGo = function (el) {
 function itemEditRows(q) {
   q = (q || "").toLowerCase().trim();
   var words = q.split(/\s+/).filter(Boolean);
+  var only = !words.length && IT.f === "nocode", none = only ? {} : null;   // a search looks through every item, as on Stock
+  if (only) itNoCode().forEach(function (it) { none[it.id] = 1; });
   var list = C.pickSort(CAT.list.filter(function (it) {
+    if (only) return !!none[it.id];
     if (!words.length) return true;
     var hay = (it.n + " " + (it.l || "") + " " + C.locSpell(it.l) + " " + it.s + " " + (it.x || []).join(" ")).toLowerCase();
     return words.every(function (w) { return hay.indexOf(w) >= 0; });
   }).map(function (it) { return { id: it.id }; }), CAT, SET.zones);
-  if (!words.length && !IT.all) return '<div class="cb" style="padding-top:0"><button class="btn" data-act="itShowAll">Show all ' + list.length + " items</button></div>";
+  if (only && !list.length) return '<div class="empty" style="padding:var(--sp-6)">Every item has a product code.</div>';
+  if (!words.length && !IT.all && !only) return '<div class="cb" style="padding-top:0"><button class="btn" data-act="itShowAll">Show all ' + list.length + " items</button></div>";
   if (!list.length) return '<div class="empty" style="padding:var(--sp-6)">No item matches “' + esc(q) + "”.</div>";
   var shown = words.length ? list : list.slice(0, 400);
   return '<table class="t"><thead><tr><th>Bin</th><th>Item</th><th>Unit</th><th class="r">Pieces / unit</th><th></th></tr></thead><tbody>' +
@@ -9052,6 +9069,7 @@ function itemEditRows(q) {
 }
 IN.itQ = function (el) { IT.q = el.value; $("#itRes").innerHTML = itemEditRows(IT.q); };
 ACT.itShowAll = function () { IT.all = true; $("#itRes").innerHTML = itemEditRows(IT.q); };
+ACT.itSet = function (el) { IT.f = el.getAttribute("data-v") || ""; $("#itChips").innerHTML = itChips(); $("#itRes").innerHTML = itemEditRows(IT.q); };
 ACT.locUpload = function () {
   var inp = document.createElement("input");
   inp.type = "file"; inp.accept = ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -10499,7 +10517,7 @@ function scanCount(sc) {
   ADVANCE++; c.at = at; LS.set("count", c); render(); window.scrollTo(0, 0);
   return { ok: true, close: true, row: id ? "#cn-" + CSS.escape(id) : ".spot" };
 }
-// Pack (3.4): a label or product code ticks its line; a look-alike or STAT line is confirmed by it. A line with no quantity yet (or at 0)
+// Pack (3.4): a label or product code ticks its line; a look-alike line is confirmed by it. A line with no quantity yet (or at 0)
 // is filled as ✓ All does (sent = ordered); an added line with nothing ordered closes the camera and asks how many on the Keypad; a
 // typed quantity is kept; a line shipped direct is left alone (3.4b)
 function scanPack(sc) {

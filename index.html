@@ -1710,6 +1710,17 @@ var CORE = (function () {
     it = it || {};
     return { ea: 1, pk: it.p || 1, cs: num(it.c) > 0 ? num(it.c) : null };
   }
+  // the unit an item's stock shows in when the Stock switch is on As set (John, 12 Nov: "different ones presented as different
+  // uom"): the one picked in Edit item, shared setting ov[id].du "ea" | "pk" | "cs"; none picked, or Cases with no case size, is packs
+  function showUnit(it) { var d = it && it.du; return d === "ea" || d === "pk" || (d === "cs" && unitChain(it).cs) ? d : "pk"; }
+  // run 6.4 (John, 12 Nov: "add or update pack and case sizes or how many packs are in a case either or"): Edit item and Add item
+  // have Pieces per case and Packs per case as two linked boxes; typing one fills the other. p = pieces in one slip unit, v = what was
+  // typed, from = "c" (Pieces per case) or "pk" (Packs per case). Stored as today: c, pieces per case (0 = no case size).
+  function caseLink(p, v, from) {
+    p = num(p) > 0 ? num(p) : 1;
+    var c = from === "pk" ? Math.round(Math.max(0, num(v)) * p) : round(Math.max(0, num(v)), 3);   // a case is whole pieces (1.5 packs of 3: 5)
+    return { c: c, pk: c > 0 ? round(c / p, 3) : 0 };
+  }
   /* pieces in one of the three views (Each · Packs · Cases): "1,000 ea"; "406 packs of 30 + 20 ea"; "10 cases of 1,000 +
      3 packs + 2 ea" (whole units, the rest in the next smaller unit); "—" when the case size isn't known */
   function qtyIn(it, each, mode) {
@@ -2842,16 +2853,34 @@ var CORE = (function () {
     var s = Math.max(1, sz.h / 1.25), m = 0.07 * Math.sqrt(s), boxH = Math.min(0.6, 0.21 * Math.pow(s, 0.7)), gapIn = 0.05 * Math.sqrt(s);
     var W = d(sz.w), L = d(sz.h), mx = d(m), bw = W - 2 * mx, th = Math.max(2, d(0.01)), gap = d(gapIn);
     var lineY = L - d(m) - d(boxH) - Math.round(gap * 1.6), top = d(m), nameBottom = lineY - gap, info = "";
-    var ord = meta.order ? "Order #" + String(meta.order).replace(/^#/, "") : "", date = labelDate(meta.date) ? "Packed " + labelDate(meta.date) : "";
-    if (ord || date) {
-      // the info line: about 0.12 in high (never under 0.1 in); if both don't fit side by side, drop the words
-      var ih = d(Math.min(0.36, 0.12 * Math.pow(s, 0.7))), minH = d(0.1);
-      while (ih > minH && textW(ord, ih) + textW(date, ih) + 2 * gap > bw) ih--;
-      if (textW(ord, ih) + textW(date, ih) + 2 * gap > bw) { ord = ord.replace(/^Order /, ""); date = date.replace(/^Packed /, ""); }
-      var iy = lineY - gap - ih;
-      if (ord) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,L,0^FH^FD" + zplText(ord) + "^FS";
-      if (date) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,R,0^FH^FD" + zplText(date) + "^FS";
-      nameBottom = iy - Math.round(gap * 1.6);
+    var num = String(meta.order || "").replace(/^#/, "").trim(), date = labelDate(meta.date) ? "Packed " + labelDate(meta.date) : "";
+    if (/^\d{1,12}$/.test(num)) {
+      // John, 12 Nov: the order number as a QR code a driver's phone scans (Samsara's Driver App reads QR) - at the left above the
+      // rule with the quiet zone it needs, "Order #7738" and "Packed 11/12/26" stacked at its right, the name in the space above.
+      // As drawn and read back in docs/hub/label-previews (app/tools/label_barcodes.js); the digits only, what a driver would type
+      var qn = qrMatrix(num).length, mag = Math.max(2, Math.floor(d(0.32 * Math.pow(s, 0.7)) / qn)), codeH = qn * mag, quiet = 4 * mag;
+      var bandTop = lineY - Math.max(gap, quiet) - codeH, x = Math.max(mx, quiet);
+      info += "^FO" + x + "," + bandTop + "^BQN,2," + mag + "^FDMA," + num + "^FS";
+      var tx = x + codeH + Math.max(quiet, 2 * gap), tw = W - mx - tx, qh = d(Math.min(0.36, 0.12 * Math.pow(s, 0.7))), qmin = d(0.1);
+      var qord = "Order #" + num, qdt = date;
+      while (qh > qmin && Math.max(textW(qord, qh), textW(qdt, qh)) > tw) qh--;
+      if (Math.max(textW(qord, qh), textW(qdt, qh)) > tw) { qord = "#" + num; qdt = labelDate(meta.date); }
+      var ql = [qord].concat(qdt ? [qdt] : []), qy = bandTop + Math.round((codeH - (ql.length * qh + (ql.length - 1) * gap)) / 2);
+      ql.forEach(function (t, j) { info += "^FO" + tx + "," + (qy + j * (qh + gap)) + "^A0N," + qh + "," + qh + "^FB" + tw + ",1,0,R,0^FH^FD" + zplText(t) + "^FS"; });
+      nameBottom = bandTop - Math.max(quiet, Math.round(gap * 1.6));
+    } else {
+      // no order number, or one that is not a number: the label as it was - the order and the packed day as one line of text
+      var ord = num ? "Order #" + num : "";
+      if (ord || date) {
+        // the info line: about 0.12 in high (never under 0.1 in); if both don't fit side by side, drop the words
+        var ih = d(Math.min(0.36, 0.12 * Math.pow(s, 0.7))), minH = d(0.1);
+        while (ih > minH && textW(ord, ih) + textW(date, ih) + 2 * gap > bw) ih--;
+        if (textW(ord, ih) + textW(date, ih) + 2 * gap > bw) { ord = ord.replace(/^Order /, ""); date = date.replace(/^Packed /, ""); }
+        var iy = lineY - gap - ih;
+        if (ord) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,L,0^FH^FD" + zplText(ord) + "^FS";
+        if (date) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,R,0^FH^FD" + zplText(date) + "^FS";
+        nameBottom = iy - Math.round(gap * 1.6);
+      }
     }
     var areaH = nameBottom - top;
     var fit = fitLabelName(name, bw, areaH, dpi, s >= 3 ? 5 : 3);
@@ -3121,11 +3150,14 @@ var CORE = (function () {
     var pieces = function (l) { return num(l.each); };
     var items = cat.list.filter(function (it) { return !it.off; }).map(function (it) {
       var r = st.items[it.id], o = open[it.id], x = { id: it.id, name: it.n, section: hubSection(it.l), unit: it.u || "EACH", pack: it.p || 1, spot: it.l || "" };
+      var du = showUnit(it);   // the words in the unit John picked for the item (du goes along only when one is picked); none: packs, as before
+      if (it.du === du) x.du = du;
+      var bi = binInfo(it); if (bi && bi.capEach > 0) x.cap = bi.capEach;   // run 6.3: the pieces its spot holds, only where a capacity is on file
       if (r && r.onHand != null) {
-        x.qty = r.onHand; x.text = eachText(it, r.onHand); x.counted_at = r.baseAt;
+        x.qty = r.onHand; x.text = qtyIn(it, r.onHand, du); x.counted_at = r.baseAt;
         x.state = r.onHand <= 0 ? "out" : stockStatus(it, r, false) === "ok" ? "ok" : "low";
       }
-      if (o) { x.ordered_at = o.date; if (o.each > 0) { x.ordered = o.each; x.on_way = whOwed(o); x.way_text = eachText(it, whOwed(o)); } }
+      if (o) { x.ordered_at = o.date; if (o.each > 0) { x.ordered = o.each; x.on_way = whOwed(o); x.way_text = qtyIn(it, whOwed(o), du); } }
       return x;
     });
     var counted = logs.filter(function (g) { return g.type === "Count"; }).sort(newest);
@@ -3142,9 +3174,17 @@ var CORE = (function () {
     slips.forEach(function (s) {
       if (s.type === "Packed" && !st.voided[s.num]) moves.push({ at: s.at, what: "sent", ref: "Slip" + (s.num ? " " + s.num : ""), lines: sum(s.lines, function (l) { return slipEach(l, cat.byId[l.id]); }) });
     });
-    return { kind: "warehouse", key: "main", name: "Warehouse", counted_at: full ? full.at : "", by: full ? full.by || "" : "", items: items,
+    var out = { kind: "warehouse", key: "main", name: "Warehouse", counted_at: full ? full.at : "", by: full ? full.by || "" : "", items: items,
       counts: counted.slice(0, HUB_COUNTS).map(function (g) { return { at: g.at, by: g.by || "", ref: "Count" + (g.num ? " " + g.num : ""), note: g.scope === "Full" ? "Full" : "Partial", lines: sum(g.lines, pieces) }; }),
       moves: moves.filter(function (m) { return Object.keys(m.lines).length; }).sort(newest).slice(0, HUB_MOVES) };
+    var asOf = hubAsOf(slips, logs); if (asOf) out.as_of = asOf;   // run 6.4 (5.2): the Hub keeps a send only when this is not older than the one it holds
+    return out;
+  }
+  // the time of the newest packing slip or stock-log record this device knows (ISO), "" when it knows none
+  function hubAsOf(slips, logs) {
+    var t = -Infinity;
+    (slips || []).concat(logs || []).forEach(function (r) { var v = r && r.at ? Date.parse(r.at) : NaN; if (v > t) t = v; });
+    return isFinite(t) ? new Date(t).toISOString() : "";
   }
   // the last n counts of an item, oldest first: [{at, each}]
   function countHistory(logs, id, n) {
@@ -4365,16 +4405,17 @@ var CORE = (function () {
     if (!bi || onHand == null || !isFinite(onHand)) return null;
     return Math.max(0, Math.round(100 * onHand / bi.capEach));
   }
-  /* how full the bins are, in words, never over 100% (Cowork, 5 Oct): "62% full"; "Full" once the bins are full, with what
-     doesn't fit in the item's own units ("3 packs of 100 more than the bins hold"); under full never rounds up to 100%.
-     -> null (unknown) or { pct (0-100), full, text, over } */
+  /* how full the bins are, in words (Cowork, 5 Oct): "62% full"; under full never rounds up to 100%. Run 6.3 (John, 12 Nov):
+     full and over show as they are, "100% full", "111% full" (the Hub's Math.round(100 * qty / cap)), with what doesn't fit
+     in the item's own units ("3 packs of 100 more than the bins hold").
+     -> null (unknown) or { pct, full, text, over } */
   function binFullText(it, onHand) {
     var bi = binInfo(it);
     if (!bi || onHand == null || !isFinite(onHand)) return null;
     var e = num(onHand);
     if (e >= bi.capEach) {
-      var extra = round(e - bi.capEach, 3);
-      return { pct: 100, full: true, text: "Full", over: extra > 0 ? eachText(it, extra) + " more than the bins hold" : "" };
+      var extra = round(e - bi.capEach, 3), over = Math.max(100, Math.round(100 * e / bi.capEach));
+      return { pct: over, full: true, text: over + "% full", over: extra > 0 ? eachText(it, extra) + " more than the bins hold" : "" };
     }
     var pct = Math.max(0, Math.min(99, Math.round(100 * e / bi.capEach)));
     return { pct: pct, full: false, text: pct + "% full", over: "" };
@@ -5110,7 +5151,7 @@ var CORE = (function () {
   }
 
   return {
-    applyOverrides: applyOverrides, belowMin: belowMin, unitChain: unitChain, qtyIn: qtyIn,
+    applyOverrides: applyOverrides, belowMin: belowMin, unitChain: unitChain, qtyIn: qtyIn, showUnit: showUnit, caseLink: caseLink,
     recvQtyText: recvQtyText, recvSummary: recvSummary, recvOdd: recvOdd, slipKeys: slipKeys, slipMemo: slipMemo, memoLook: memoLook, applySlipMemo: applySlipMemo, slipPO: slipPO, dupDelivery: dupDelivery,
     spotOf: spotOf, spotsOf: spotsOf, walkText: walkText, countTotal: countTotal, countFar: countFar,
     CFG: CFG, num: num, round: round, localDay: localDay, clean: clean, esc: esc, waitDays: waitDays,
@@ -5352,13 +5393,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "590f3d8faa";
+var BUILD = "b51e90bc60";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.7 · 12 Nov 2026";
+var VERSION = "1.4.8 · 13 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -5835,12 +5876,18 @@ function hubSend() {
   try { body = JSON.stringify(C.hubStock(CAT, stock(), values(S.slips), values(S.logs))); } catch (e) { HUB.busy = false; return Promise.resolve(false); }
   // 1.4.6: why a send did not go is kept for Settings - "address" (the Operations Center does not know it), "refused" (it answered no),
   // "answer" (nothing came back: no network, or the send was cut off before an answer)
-  return fetch(addr, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body }).then(function (r) { return r.ok ? "" : r.status === 404 ? "address" : "refused"; }, function () { return "answer"; }).then(function (why) {
+  // run 6.4 (5.2): "older" (status 409, { ok: false, error: "older" }) - the Hub holds a newer picture of the warehouse than this send
+  return fetch(addr, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body }).then(function (r) {
+    if (r.ok) return ""; if (r.status === 404) return "address";
+    if (r.status === 409) return r.json().then(function (j) { return j && j.error === "older" ? "older" : "refused"; }, function () { return "refused"; });
+    return "refused";
+  }, function () { return "answer"; }).then(function (why) {
     var ok = !why;
     HUB.busy = false;
-    if (ok) { HUB.fails = 0; LS.set("hubAt", new Date().toISOString()); LS.del("hubErr"); LS.del("hubWhy"); } else { HUB.fails++; LS.set("hubErr", new Date().toISOString()); LS.set("hubWhy", why); }
-    // not through: tried again in 5 minutes, three times; after that with the next save
-    if (HUB.again) { HUB.again = false; hubSoon(1000); } else if (!ok && HUB.fails < 4) hubSoon(5 * 60000);
+    if (ok) { HUB.fails = 0; LS.set("hubAt", new Date().toISOString()); LS.del("hubErr"); LS.del("hubWhy"); } else { if (why !== "older") HUB.fails++; LS.set("hubErr", new Date().toISOString()); LS.set("hubWhy", why); }
+    // not through: tried again in 5 minutes, three times; after that with the next save. An older picture is not sent again (it would be
+    // turned away again); the next save sends a newer one
+    if (HUB.again) { HUB.again = false; hubSoon(1000); } else if (!ok && why !== "older" && HUB.fails < 4) hubSoon(5 * 60000);
     return ok;
   });
 }
@@ -7358,7 +7405,8 @@ ACT.backCancelYes = function (el) {
 
 /* ---------- stock ---------- */
 var STK = LS.get("stk", { q: "", f: "auto", g: "loc" });
-if (STK.u !== "ea" && STK.u !== "cs") STK.u = "pk";   // John, 11 Oct: Each · Packs · Cases, remembered on this device
+if (STK.u !== "ea" && STK.u !== "cs" && STK.u !== "as") STK.u = "pk";   // John, 11 Oct: Each · Packs · Cases, remembered on this device
+if (!STK.as) { if (STK.u === "pk") STK.u = "as"; STK.as = 1; }   // 6.2 (12 Nov): As set first and usual (with no unit picked it shows packs, as before)
 if (STK.f === "out" || STK.f === "min") STK.f = "order";   // the 1.3 filters Out and Needs ordering are ORDER now (9.5)
 // the filter chips (9.5): Order (out or under its minimum), Low, Expiring, Not counted, All; Order first when it has anything.
 // 1.4 (ODS casing, steer 13:47): sentence case; UPPERCASE stays for overlines, column heads and the status words in chips.
@@ -7411,10 +7459,11 @@ function expCell(id) {
   return '<span class="nowrap">' + esc(C.fmtDate(d[0])) + "</span> " + expPill(d[0]) + (d.length > 1 ? '<small class="sub2">+' + (d.length - 1) + (d.length === 2 ? " more date" : " more dates") + "</small>" : "");
 }
 // stock on screen in the unit the Each · Packs · Cases control picks (core.qtyIn); the same control wherever stock shows
-function stockQty(it, each) { return C.qtyIn(it || { u: "EACH", p: 1 }, each, STK.u); }
+function stockQty(it, each) { return C.qtyIn(it || { u: "EACH", p: 1 }, each, stkU(it)); }
+function stkU(it) { return STK.u === "as" ? C.showUnit(it) : STK.u; }   // As set: each item in the unit picked in Edit item
 var unitAgain = null;   // re-opens the sheet showing the control when the unit changes
 function unitSeg() {   // 1.7g (steer 18:07 A5): uiSeg, one builder; .useg stays as the tests' handle
-  return uiSeg([["ea", "Each"], ["pk", "Packs"], ["cs", "Cases"]], STK.u, "stkSet", { attrs: ' data-k="u"', cls: "useg" });
+  return uiSeg([["as", "As set"], ["ea", "Each"], ["pk", "Packs"], ["cs", "Cases"]], STK.u, "stkSet", { attrs: ' data-k="u"', cls: "useg" });
 }
 function stockTable() {
   var d = stockRows(), st = d.st, list = d.list, f = d.f, ord = whOrd(), ordQ = whOrdQ();
@@ -7431,7 +7480,7 @@ function stockTable() {
     // 1.4 (steer 13:47): an uncounted item shows the blank-cell dash, so NOT COUNTED reads once (in the chip); the old text, for the
     // review pack: '<span class="dim">not counted</span>'
     var oh = r.onHand == null ? '<span class="dim">—</span>' : '<span class="big' + (r.onHand <= 0 ? " zero" : "") + '">' + stockQty(it, r.onHand).split(" + ").map(function (s) { return '<span class="nowrap">' + esc(s) + "</span>"; }).join(" + ") + "</span>" + coverBar(r);
-    var full = r.stale ? null : C.binFullText(it, r.onHand);   // how full its bins are (Jackson's bin counts), never over 100%
+    var full = r.stale ? null : C.binFullText(it, r.onHand);   // how full its bins are (Jackson's bin counts), over 100% as it is (run 6.3)
     if (full) oh += '<small class="sub2 binpct">' + esc(full.text) + "</small>";
     var s = C.stockStatus(it, r, ord[it.id]);
     rows += '<tr class="click" data-act="itemSheet" data-id="' + esc(it.id) + '"><td>' + locChip(it.l) + "</td>" +
@@ -7508,7 +7557,7 @@ ACT.itemSheet = function (el) {
   }).join("");
   var calc = r.base == null ? "<div>" + uiChip("none") + "</div>" :   /* steer 18:25: the never-counted item says Not counted (1.4 review I1 had cut "Not counted yet. Count it to start tracking.") */
     '<div class="grid2"><div><div class="muted" style="font-size:var(--fs-13)">On hand now</div><div style="font-size:var(--fs-24);font-weight:700">' + esc(r.onHand == null ? "not counted" : stockQty(it, r.onHand)) + "</div>" +
-      (STK.u !== "ea" && (it.p || 1) > 1 && r.onHand != null && Math.abs(r.onHand) >= it.p ? '<div class="muted" style="font-size:var(--fs-15)">' + fmt(r.onHand) + " ea in all</div>" : "") + "</div>" +
+      (stkU(it) !== "ea" && (it.p || 1) > 1 && r.onHand != null && Math.abs(r.onHand) >= it.p ? '<div class="muted" style="font-size:var(--fs-15)">' + fmt(r.onHand) + " ea in all</div>" : "") + "</div>" +
     '<div style="font-size:var(--fs-15);line-height:1.7">Counted ' + esc(C.fmtDate(dayOf(r.baseAt))) + ": <b>" + esc(stockQty(it, r.base)) + "</b><br>+ received <b>" + esc(stockQty(it, r.inE)) + "</b> · − sent <b>" + esc(stockQty(it, r.outE)) + "</b>" + (r.adjE ? " · adjusted <b>" + (r.adjE > 0 ? "+" : "") + esc(stockQty(it, r.adjE)) + "</b>" : "") + "</div></div>";
   // 9.5: the last 8 counts as a sparkline, usage per week (4 weeks of slips), the minimum, the order date
   var counts = C.countHistory(values(S.logs), id, 8), pts = C.sparkPoints(counts.map(function (c) { return c.each; }), 160, 36), ordAt = whOrd()[id] || "";
@@ -7563,8 +7612,8 @@ ACT.whOrdGo = function (el) {
   toast(d ? "Ordered " + C.labelDate(d) : "Cleared"); render.keepScroll = true; render();
 };
 
-// "Bin capacity 180 packs (12 bins × 15) · 62% full" (Jackson's bin counts, 2 Oct); never over 100%: "· Full · 3 packs of 100
-// more than the bins hold" (Cowork, 5 Oct); nothing where the bin unit isn't clear. The most a spot holds (6 Oct): "Bin
+// "Bin capacity 180 packs (12 bins × 15) · 62% full" (Jackson's bin counts, 2 Oct); over 100% as it is (run 6.3): "· 102% full ·
+// 3 packs of 100 more than the bins hold" (Cowork, 5 Oct); nothing where the bin unit isn't clear. The most a spot holds (6 Oct): "Bin
 // capacity 112 boxes (3 bins)", "1,100 kits (3 bins × 100 + 8 boxes of 100)"
 function binLine(it, r) {
   var bi = C.binInfo(it); if (!bi) return "";
@@ -7732,7 +7781,7 @@ function appShows(it, r) {
   if (r.stale) return { html: "<b>—</b>recount needed", same: false, text: "recount needed" };
   if (r.onHand == null) return { html: "<b>—</b>not counted", same: false, text: "not counted" };
   var p = it.p || 1, e = r.onHand;
-  if (STK.u !== "pk") { var a = appShowsPk(it, e, p); a.html = "<b>" + esc(stockQty(it, e)) + "</b>"; return a; }
+  if (stkU(it) !== "pk") { var a = appShowsPk(it, e, p); a.html = "<b>" + esc(stockQty(it, e)) + "</b>"; return a; }
   return appShowsPk(it, e, p);
 }
 function appShowsPk(it, e, p) {
@@ -8369,8 +8418,8 @@ function takeScan(out, src, ocr) {
   return added;
 }
 // the slip's own figure as read ("2 cases = 20 boxes"); the warehouse side in the unit the Each · Packs · Cases control picks
-function recvQty(l) { var it = itemOf(l.id), t = C.recvQtyText(it, l.vendorQty, l.uom, l.each), k = t.lastIndexOf(" = "); return STK.u === "pk" || !t ? t : (k >= 0 ? t.slice(0, k + 3) : "") + stockQty(it, l.each); }
-function recvGotText(l) { var it = itemOf(l.id), t = C.recvQtyText(it, null, "", l.got); return STK.u === "pk" || !t ? t : stockQty(it, l.got); }
+function recvQty(l) { var it = itemOf(l.id), t = C.recvQtyText(it, l.vendorQty, l.uom, l.each), k = t.lastIndexOf(" = "); return stkU(it) === "pk" || !t ? t : (k >= 0 ? t.slice(0, k + 3) : "") + stockQty(it, l.each); }
+function recvGotText(l) { var it = itemOf(l.id), t = C.recvQtyText(it, null, "", l.got); return stkU(it) === "pk" || !t ? t : stockQty(it, l.got); }
 // what was ordered, on the delivery's line (John, 10 Nov): "ORDERED 10 cases", and once the line is checked or typed, what is
 // still owed after this delivery - the receipt shows a short order at a glance
 function recvOrdered(l, it) {
@@ -8449,15 +8498,22 @@ function renderReceive() {
     (left ? uiPrimary("Everything arrived as listed", "rcAll", busy ? " disabled" : "") + uiSecondary("Save delivery", "rcSave", busy ? " disabled" : "") : uiPrimary("Save delivery", "rcSave", busy ? " disabled" : "")) + "</div></div>" + recvRecentHTML() + uiScan("camOpen").replace('"ds-scan"', '"ds-scan up"');
 }
 // an item added by hand (the picker's "recv" target): a line of its own; its quantity is typed in the editor
+var RC_SWAP = -1;   // 6.1 (John, 12 Nov): the hand-added line whose item is being changed (the editor's Change item)
 function addRecvLine(id) {
   var r = recv(), it = itemOf(id); if (!it) return;
   var i = -1; r.lines.forEach(function (l, k) { if (l.id === id) i = k; });
-  if (i < 0) { r.lines.push({ id: id, text: "", how: "hand", vendorQty: null, uom: "", per: {}, each: null, exp: [], note: "", flag: "", why: "", st: "", got: null, src: "hand" }); i = r.lines.length - 1; }
+  var nl = { id: id, text: "", how: "hand", vendorQty: null, uom: "", per: {}, each: null, exp: [], note: "", flag: "", why: "", st: "", got: null, src: "hand" };
+  var sw = RC_SWAP; RC_SWAP = -1;
+  if (sw >= 0 && r.lines[sw] && sw !== i) {
+    if (i >= 0) { r.lines.splice(sw, 1); if (sw < i) i--; }   // the new item is on the list already: its line is the one to change
+    else { r.lines[sw] = nl; i = sw; }   // the same place on the list; how many came is typed again for the new item
+  }
+  if (i < 0) { r.lines.push(nl); i = r.lines.length - 1; }
   if (!r.src) r.src = "hand";
   saveRecv(); render.keepScroll = true; render();
   openRecvEditor(i);
 }
-ACT.rcAdd = function () { openItemPicker("recv", "Add an item to this delivery"); };
+ACT.rcAdd = function () { RC_SWAP = -1; openItemPicker("recv", "Add an item to this delivery"); };
 IN.rcDate = function (el) { recv().date = el.value; saveRecv(); };
 ACT.rcOk = function (el) { var l = recv().lines[+el.getAttribute("data-i")]; if (!l || !(l.each > 0)) return; l.st = "ok"; l.got = null; saveRecv(); render.keepScroll = true; render(); };
 ACT.rcUndo = function (el) { var l = recv().lines[+el.getAttribute("data-i")]; if (!l) return; l.st = ""; l.got = null; saveRecv(); render.keepScroll = true; render(); };
@@ -8553,9 +8609,18 @@ function openRecvEditor(i) {
     '<div class="padsheet rcpad">' + listed + seg + '<div class="padnm">Came</div>' + uiField("rcEdV", RCE.v, "Came").replace('<input class="ds-field', '<input data-in="rcEdV" class="ds-field') + '<div class="padord" id="rcEdU">' + esc(u.w) + "</div>" +
     // 1.4 review C1: the reasons before the Keypad (they were after ✓, below the fold at 1080); a wide sheet, two columns in landscape
     '<div class="padeach" id="rcEdEach"></div>' + (l.each > 0 ? '<div class="reasons">' + reasons + '</div><div class="rcwhy" id="rcEdWhy"></div>' : "") + uiKeypad("rcEdV", "rcEdDone", "", true) + "</div>",
+    (l.src === "hand" ? '<button class="btn danger" data-act="rcEdDel">Remove</button><button class="btn" data-act="rcEdItem">Change item</button>' : "") +   // 6.1: a line added by hand can be removed or changed to another item before the save
     '<button class="btn" data-act="closeSheet">Cancel</button>', true);   // 1.4: the Keypad's ✓ is Done (one red action, as on Packs to send)
   rcEdPaint();
 }
+ACT.rcEdItem = function () { var i = RCE.i; closeSheet(); RCE = null; RC_SWAP = i; openItemPicker("recv", "Change to which item?"); };
+ACT.rcEdDel = function () {
+  var r = recv(), l = r.lines[RCE.i], it = l && itemOf(l.id); if (!l) return;
+  r.lines.splice(RCE.i, 1);
+  if (!r.lines.length && !r.other.length && !r.pages) r.src = "";   // nothing left: the next slip read is a slip again
+  closeSheet(); RCE = null; saveRecv(); render.keepScroll = true; render();
+  toast(it ? "Removed " + it.n : "Removed");
+};
 function rcEdEach() { var u = RCE.units.filter(function (x) { return x.k === RCE.unit; })[0] || RCE.units[0]; return C.round((Number(RCE.v) || 0) * u.per, 3); }
 function rcEdPaint() {
   var l = recv().lines[RCE.i], it = itemOf(l.id), each = rcEdEach(), el = $("#rcEdEach"), vv = $("#rcEdV");
@@ -8899,7 +8964,7 @@ ACT.logSheet = function (el) {
   unitAgain = function () { ACT.logSheet(el); };
   var rows = g.lines.map(function (l) {
     var it = itemOf(l.id) || { n: l.id, u: "EACH", p: 1 };
-    return "<tr><td>" + esc(it.n) + '</td><td class="r">' + (g.type === "Count" ? "" : l.each > 0 && g.type === "Adjustment" ? "+" : "") + esc(STK.u === "pk" ? qtyText(it, l.each) : stockQty(it, l.each)) + "</td></tr>";
+    return "<tr><td>" + esc(it.n) + '</td><td class="r">' + (g.type === "Count" ? "" : l.each > 0 && g.type === "Adjustment" ? "+" : "") + esc(stkU(it) === "pk" ? qtyText(it, l.each) : stockQty(it, l.each)) + "</td></tr>";
   }).join("");
   openSheet(g.type + (g.num ? " #" + g.num : " (uploading)"), (rows ? unitSeg() : "") + '<p style="margin:0">' + esc(when(g.at)) + (g.by ? " · " + esc(g.by) : "") + (g.vendor ? " · " + esc(g.vendor) : "") + (g.ref ? " · " + esc(g.ref) : "") + (g.scope ? " · " + esc(g.scope) + " count" : "") + "</p>" +
     (g.notes ? '<p class="muted" style="margin:0">' + esc(g.notes) + "</p>" : "") +
@@ -9027,7 +9092,7 @@ function renderSettings() {
 }
 // the Operations Center (12 Nov): this device's stock address, pasted from the Hub's Settings, kept on the device only and never shown again
 function hubRow() {
-  var at = LS.get("hubAt", ""), err = LS.get("hubErr", ""), why = { address: " · address not right", refused: " · not taken", answer: " · no answer" }[LS.get("hubWhy", "")] || "";   // 1.4.6: why it did not go
+  var at = LS.get("hubAt", ""), err = LS.get("hubErr", ""), why = { address: " · address not right", refused: " · not taken", older: " · not taken", answer: " · no answer" }[LS.get("hubWhy", "")] || "";   // 1.4.6: why it did not go
   return '<div class="locset" id="hubRow"><div class="grow"><b>Operations Center</b><br><span class="muted" style="font-size:var(--fs-15)">' +
     (!hubAddr() ? "Stock is not sent from this iPad" : err ? "Stock not sent · tried " + esc(when(err)) + why : at ? "Stock sent " + esc(when(at)) : "Stock not sent yet") +
     '</span></div><button class="btn" data-act="hubSet">' + (hubAddr() ? "Change the stock address" : "Add the stock address") + '</button><a class="btn ghost" href="' + HUB_PAGE + '" target="_blank" rel="noopener">Open the Operations Center</a></div>';   // 1.4.7 (John): the way to the Hub from the iPad, as the print station card's link
@@ -9124,13 +9189,37 @@ ACT.itemEdit = function (el) {
   openSheet("Edit item", '<label class="f">Name on the slip<input id="ieN" type="text" value="' + esc(it.n) + '"></label><div class="grid2">' +
     '<label class="f">Bin location<input id="ieL" type="text" value="' + esc(it.l || "") + '" placeholder="e.g. R3B2S1 (row, bay, shelf)" data-in="locSpellIn"><span class="locfull" id="ieLw">' + esc(C.locSpell(it.l)) + "</span></label>" +
     '<label class="f">Slip unit<input id="ieU" type="text" list="ieUnits" value="' + esc(it.u) + '"><datalist id="ieUnits">' + unitOpts.map(function (u) { return '<option value="' + esc(u) + '">'; }).join("") + '<option value="PK/10"><option value="PK/25"><option value="PK/50"><option value="PK/100"></datalist></label>' +
-    '<label class="f">Pieces in one slip unit<input id="ieP" type="number" enterkeyhint="done" inputmode="numeric" min="1" value="' + esc(it.p || 1) + '"></label>' +
+    '<label class="f">Pieces in one slip unit<input id="ieP" type="number" enterkeyhint="done" inputmode="numeric" min="1" value="' + esc(it.p || 1) + '" data-in="casePIn" data-c="ieC" data-pk="iePk"></label>' +
     '<label class="f">Pieces in a box (when a site writes “1 box”)<input id="ieK" type="number" enterkeyhint="done" inputmode="numeric" min="0" value="' + esc(it.k || "") + '"></label>' +
-    '<label class="f">Pieces per case<input id="ieC" type="number" enterkeyhint="done" inputmode="numeric" min="0" value="' + esc(it.c || "") + '"></label>' +
+    caseBoxes("ie", it.p, it.c) +
+    '<label class="f">Show stock in<select id="ieDu">' + [["ea", "Each"], ["pk", "Packs"], ["cs", "Cases"]].map(function (o) { return '<option value="' + o[0] + '"' + ((it.du || "pk") === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
     '<label class="f">Minimum (each)<input id="ieMin" type="number" enterkeyhint="done" inputmode="numeric" min="0" value="' + esc(it.min || "") + '"></label></div>' +
     '<label class="opt"><input id="ieOff" type="checkbox"' + (it.off ? " checked" : "") + "> Hide this item (no longer stocked)</label>" + codeRow(id),
     '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="itemEditSave" data-id="' + esc(id) + '">Save for every device</button>');
 };
+// run 6.4: Pieces per case and Packs per case, two linked boxes (typing one fills the other); only Pieces per case is saved (c)
+function caseBoxes(pre, p, c) {
+  var pk = C.caseLink(p, c, "c").pk;
+  return '<label class="f">Pieces per case<input id="' + pre + 'C" type="number" enterkeyhint="done" inputmode="numeric" min="0" value="' + esc(c || "") + '" data-in="caseIn" data-from="c" data-p="' + pre + 'P" data-pair="' + pre + 'Pk"></label>' +
+    '<label class="f">Packs per case<input id="' + pre + 'Pk" type="number" enterkeyhint="done" inputmode="decimal" min="0" step="any" value="' + esc(pk || "") + '" data-in="caseIn" data-from="pk" data-p="' + pre + 'P" data-pair="' + pre + 'C"></label>';
+}
+IN.caseIn = function (el) {
+  var from = el.getAttribute("data-from"), pair = document.getElementById(el.getAttribute("data-pair")), pr = document.getElementById(el.getAttribute("data-p"));
+  if (!pair) return;
+  el.setAttribute("data-last", "1"); pair.removeAttribute("data-last");   // the box typed last says what the case is, when Save changes the pack size
+  var r = C.caseLink(pr && pr.value, el.value, from);
+  pair.value = el.value.trim() === "" ? "" : String((from === "pk" ? r.c : r.pk) || "");
+};
+// the pack size changed: the case stays the same pieces, so Packs per case follows
+IN.casePIn = function (el) {
+  var c = document.getElementById(el.getAttribute("data-c")), pk = document.getElementById(el.getAttribute("data-pk"));
+  if (c && pk && c.value.trim() !== "") { pk.value = String(C.caseLink(el.value, c.value, "c").pk || ""); pk.removeAttribute("data-last"); }
+};
+// a slip unit PK/n with Pieces in one slip unit left at 1 makes the pack n at Save: a case typed in Packs per case is that many packs of n
+function caseAtSave(pre, p, bumped) {
+  var pk = document.getElementById(pre + "Pk");
+  return bumped && pk && pk.hasAttribute("data-last") ? C.caseLink(p, pk.value, "pk").c : C.caseLink(p, $("#" + pre + "C").value, "c").c;
+}
 function baseItem(id) {
   for (var i = 0; i < CATALOG.length; i++) if (CATALOG[i].id === id) return CATALOG[i];
   return null;
@@ -9138,13 +9227,13 @@ function baseItem(id) {
 ACT.itemEditSave = function (el) {
   var id = el.getAttribute("data-id"), it = itemOf(id);
   var ch = { n: $("#ieN").value.trim() || it.n, l: $("#ieL").value.trim().toUpperCase().replace(/^MID\b/, "Mid").replace(/^BACK\b/, "Back"), u: ($("#ieU").value.trim() || it.u).toUpperCase(),
-    p: Math.max(1, Number($("#ieP").value) || 1), k: Number($("#ieK").value) || 0, c: Math.max(0, Number($("#ieC").value) || 0), min: Math.max(0, Number($("#ieMin").value) || 0), off: $("#ieOff").checked ? 1 : 0 };
-  if (/^PK\/(\d+)$/.test(ch.u) && ch.p === 1) ch.p = +ch.u.split("/")[1];
+    p: Math.max(1, Number($("#ieP").value) || 1), k: Number($("#ieK").value) || 0, c: Math.max(0, Number($("#ieC").value) || 0), min: Math.max(0, Number($("#ieMin").value) || 0), off: $("#ieOff").checked ? 1 : 0, du: $("#ieDu").value };
+  if (/^PK\/(\d+)$/.test(ch.u) && ch.p === 1) { ch.p = +ch.u.split("/")[1]; ch.c = caseAtSave("ie", ch.p, true); }
   var base = baseItem(id);
   closeSheet(); saveSettings(function (next) {
     if (base) {
       var ov = {};
-      ["n", "l", "u", "p", "k", "c", "min", "off"].forEach(function (k) { var b = base[k] == null ? (k === "off" || k === "k" || k === "c" || k === "min" ? 0 : "") : base[k]; if (ch[k] !== b) ov[k] = ch[k]; });
+      ["n", "l", "u", "p", "k", "c", "min", "off", "du"].forEach(function (k) { var b = base[k] == null ? (k === "du" ? "pk" : k === "off" || k === "k" || k === "c" || k === "min" ? 0 : "") : base[k]; if (ch[k] !== b) ov[k] = ch[k]; });
       if (Object.keys(ov).length) next.items.ov[id] = ov; else delete next.items.ov[id];
     } else {
       next.items.add = next.items.add.map(function (a) { if (a.id !== id) return a; var c = JSON.parse(JSON.stringify(a)); for (var k in ch) c[k] = ch[k]; return c; });
@@ -9157,7 +9246,8 @@ ACT.itemAdd = function () {
     '<label class="f">Section<select id="iaS">' + CAT.sections.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("") + "</select></label>" +
     '<label class="f">Bin location<input id="iaL" type="text" placeholder="e.g. R3B2S1 (row, bay, shelf)" data-in="locSpellIn"><span class="locfull" id="iaLw"></span></label>' +
     '<label class="f">Slip unit<input id="iaU" type="text" list="ieUnits2" value="EACH"><datalist id="ieUnits2">' + UNITS.map(function (u) { return '<option value="' + u + '">'; }).join("") + "</datalist></label>" +
-    '<label class="f">Pieces in one slip unit<input id="iaP" type="number" enterkeyhint="done" inputmode="numeric" min="1" value="1"></label>' +
+    '<label class="f">Pieces in one slip unit<input id="iaP" type="number" enterkeyhint="done" inputmode="numeric" min="1" value="1" data-in="casePIn" data-c="iaC" data-pk="iaPk"></label>' +
+    caseBoxes("ia", 1, 0) +
     '<label class="f">Vendor<input id="iaV" type="text" list="iaVendors"><datalist id="iaVendors">' + catalogVendors().map(function (v) { return '<option value="' + esc(v) + '">'; }).join("") + "</datalist></label>" +
     '<label class="f">Vendor item #<input id="iaVi" type="text"></label></div>',
     '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="itemAddSave">Add for every device</button>');
@@ -9166,8 +9256,9 @@ function catalogVendors() { var seen = {}; CAT.list.forEach(function (it) { if (
 ACT.itemAddSave = function () {
   var n = $("#iaN").value.trim(); if (!n) { toast("Enter a name"); return; }
   var u = ($("#iaU").value.trim() || "EACH").toUpperCase(), p = Math.max(1, Number($("#iaP").value) || 1);
-  if (/^PK\/(\d+)$/.test(u) && p === 1) p = +u.split("/")[1];
+  var bumped = /^PK\/(\d+)$/.test(u) && p === 1; if (bumped) p = +u.split("/")[1];
   var item = { id: "ADD-" + Date.now().toString(36).toUpperCase(), n: n, s: $("#iaS").value, l: $("#iaL").value.trim().toUpperCase(), u: u, p: p, v: $("#iaV").value.trim(), vi: $("#iaVi").value.trim(), syn: [n.toLowerCase()], slip: 0 };
+  var c = caseAtSave("ia", p, bumped); if (c > 0) item.c = c;   // run 6.4: the case size, in pieces, as Edit item stores it
   closeSheet(); saveSettings(function (next) { next.items.add.push(item); return next; });
 };
 ACT.reloadAll = function () {
@@ -10778,7 +10869,7 @@ document.addEventListener("pointerdown", function (e) {
     updCheck(); updFetch();
   }).catch(function () {});
   // test hook (only with ?debug=1 in the address)
-  if (/[?&]debug=1\b/.test(location.search)) window.__ow = { S: S, ST: ST, toast: toast, photoSheet: photoSheet, get SET() { return SET; }, get CAT() { return CAT; }, syncAll: syncAll, flushOutbox: flushOutbox, printNew: printNew, autoSync: autoSync, stock: stock, saveLog: saveLog, UPD: UPD, updApply: updApply, updCheck: updCheck, ordersState: ordersState, render: render,
+  if (/[?&]debug=1\b/.test(location.search)) window.__ow = { S: S, ST: ST, toast: toast, photoSheet: photoSheet, get SET() { return SET; }, get CAT() { return CAT; }, syncAll: syncAll, flushOutbox: flushOutbox, printNew: printNew, autoSync: autoSync, stock: stock, saveLog: saveLog, UPD: UPD, updApply: updApply, updCheck: updCheck, ordersState: ordersState, render: render, HUB: HUB,
     ui: { chip: uiChip, row: uiRow, progress: uiProgress, primary: uiPrimary, secondary: uiSecondary, empty: uiEmpty, qbadge: uiQueueBadge, seg: uiSeg, appBar: uiAppBar, tabBar: uiTabBar, field: uiField, keypad: uiKeypad, scan: uiScan, rail: uiRail, toastUndo: toastUndo, openSheet: openSheet } };
 })();
 

@@ -2255,6 +2255,8 @@ var CORE = (function () {
     var ty = slip.typed;
     if (ty && (clean(ty.n) !== clean(slip.shipTo) || clean(ty.a) !== clean(slip.address))) { d.pn = clean(ty.n); d.pa = clean(ty.a); if (slip.loc === "manual") d.pm = 1; }
     if (slip.dash != null) d.dash = slip.dash ? 1 : 0;
+    var mg = (slip.merged || slip.mg || []).map(Number).filter(Boolean);   // the other orders a merged slip took in (13 Nov)
+    if (mg.length) d.mg = mg;
     var wz = {}, big = [];
     slip.lines.forEach(function (l) { if (l.id && l.was != null && num(l.was) !== num(l.ordered)) wz[l.id] = round(num(l.was), 3); if (l.id && l.big) big.push(l.id); });
     if (Object.keys(wz).length) d.wz = wz;
@@ -2338,7 +2340,8 @@ var CORE = (function () {
       shipDate: (f.ShipDate || "").slice(0, 10), boxes: num(f.TotalBoxes), by: f.PackedBy || "", notes: f.Notes || "",
       device: f.Device || d.device || "", at: d.at || entryWhen(e), when: entryWhen(e), cid: d.id || d.cid || "",
       status: entryStatus(e), lines: d.lines,
-      pn: d.pn || "", pa: d.pa || "", pm: !!d.pm, dash: d.dash == null ? null : !!d.dash
+      pn: d.pn || "", pa: d.pa || "", pm: !!d.pm, dash: d.dash == null ? null : !!d.dash,
+      mg: Array.isArray(d.mg) ? d.mg.map(Number).filter(Boolean) : []
     };
   }
   // A stock-log entry -> log record: lines [[itemId, each]] ; type Received | Count | Adjustment | Void slip
@@ -3724,6 +3727,43 @@ var CORE = (function () {
   /* ---------- orders: open / closed / backorders ---------- */
   // a short line is still owed (a backorder) unless the reason says it won't be sent
   function owedNote(n) { return /^(backordered|out of stock)?$/i.test(clean(n)); }
+  /* ---------- a site's open orders merged into one (John, 13 Nov) ----------
+     "if a site has multiple order in the packer can see that they do and have the option ... to merge all the open orders for that
+     location into one and only take the largest qty on one of the orders if they have the same items". Where an order ships: its
+     dashboard site, else its ship-to name and street ("" without a street: never grouped on a name alone) */
+  function orderPlace(o, name) {
+    if (!o) return "";
+    var rs = rosterSite({ practice: o.practice, address: o.address, email: o.email });
+    if (rs) return "r:" + rs.n;
+    var st = streetKey(firstLine(o.address));
+    return st ? "s:" + locNorm(name || o.practice) + "|" + st : "";
+  }
+  // orders -> one order under the oldest's number: every line of each, a line on more than one taken at its largest (in today's pack
+  // size, as the pack screen reads it), never added up. merged: the other numbers; overlap: the lines on more than one, with what each
+  // asked for (for the email); null for fewer than two orders
+  function mergeOrders(list, cat) {
+    cat = cat || buildCatalog({});
+    list = (list || []).filter(Boolean).slice().sort(function (a, b) { return a.num - b.num; });
+    if (list.length < 2) return null;
+    var at = {}, keys = [], asks = {};
+    var conv = function (l) { var it = l.id ? cat.byId[l.id] : null; return it && l.src === "form" && l.raw != null ? round(num(l.raw) * (it.op || it.p || 1) / (it.p || 1), 3) : num(l.ordered); };
+    list.forEach(function (o) {
+      (o.lines || []).forEach(function (l) {
+        var k = l.id || "txt:" + clean(l.name).toLowerCase() + "|" + clean(l.unit).toLowerCase(), q = conv(l);
+        if (!at[k]) { at[k] = { l: l, q: q }; keys.push(k); asks[k] = []; } else if (q > at[k].q) at[k] = { l: l, q: q };
+        asks[k].push([o.num, q]);
+      });
+    });
+    var first = list[0], out = {};
+    for (var f in first) out[f] = first[f];
+    out.lines = keys.map(function (k) { return at[k].l; });
+    out.comments = list.map(function (o) { return clean(o.comments); }).filter(Boolean).join("\n");
+    out.stat = list.some(function (o) { return !!o.stat; });
+    return { order: out, merged: list.slice(1).map(function (o) { return o.num; }),
+      overlap: keys.filter(function (k) { return asks[k].length > 1; }).map(function (k) { var l = at[k].l; return { id: l.id || "", name: l.name || "", unit: l.unit || "", asks: asks[k], took: at[k].q }; }) };
+  }
+  // "#1, #2 and #3"
+  function numsWords(a) { a = a.map(function (n) { return "#" + n; }); return a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1]; }
   function orderState(orders, slips, logs, cat) {
     slips = dedupe(slips).map(aliasSlip); logs = dedupe(logs);
     var voided = {};
@@ -3760,7 +3800,13 @@ var CORE = (function () {
       });
       if (open.length) back.push({ order: +o, slips: list.map(function (s) { return s.num; }), first: first, lines: open });
     });
-    return { byOrder: byOrder, backorders: back, voided: voided };
+    // a merged slip (John, 13 Nov) covers the other orders it took in: they leave the queue with it, owing nothing of their own
+    var into = {};
+    slips.forEach(function (s) {
+      if (voided[s.num] || !s.order || !s.mg || !s.mg.length) return;
+      s.mg.forEach(function (n) { if (!n || n === s.order) return; into[n] = s.order; (byOrder[n] = byOrder[n] || []).push(s); });
+    });
+    return { byOrder: byOrder, backorders: back, voided: voided, into: into };
   }
 
   /* ---------- "your order was packed" email, for the stock-control sites only ---------- */
@@ -4043,9 +4089,16 @@ var CORE = (function () {
     short.forEach(function (l) { var w = clean(l.note).toLowerCase(); notSent.push("- " + nm(l) + ": " + qu(l, num(l.ordered) - num(l.sent)) + " (" + (WHY_SITE[w] || w) + ")"); });
     // other sites get no shipped-direct list, so a direct line is listed as not in the box, with why
     if (opts.other) direct.forEach(function (l) { notSent.push("- " + nm(l) + ": " + qu(l, directOf(l)) + " (shipped direct; it comes separately)"); });
-    if (opts.other) out = [(slip.follow ? "The backordered items from your order #" + slip.order + " have" : "Your order #" + slip.order + " has") + " been fulfilled and will be delivered by a courier."];
-    else out = [(slip.follow ? "The backordered items from order #" + slip.order + " for " + siteName + " have" : "Order #" + slip.order + " for " + siteName + " has") +
+    var mg = slip.follow ? [] : (slip.merged || slip.mg || []).filter(function (n) { return n && n !== slip.order; }), nums = numsWords([slip.order].concat(mg));
+    if (opts.other) out = [(slip.follow ? "The backordered items from your order #" + slip.order + " have" : mg.length ? "Your orders " + nums + " have" : "Your order #" + slip.order + " has") + " been fulfilled and will be delivered by a courier."];
+    else out = [(slip.follow ? "The backordered items from order #" + slip.order + " for " + siteName + " have" : mg.length ? "Orders " + nums + " for " + siteName + " have" : "Order #" + slip.order + " for " + siteName + " has") +
       " been fulfilled (" + b + (b === 1 ? " box" : " boxes") + ")."];
+    // merged (John, 13 Nov): one shipment; where the orders asked for the same item, the larger amount, never the two added together
+    if (mg.length) {
+      var ov = slip.overlap || [];
+      out.push("", "These orders were merged into one shipment." + (ov.length ? " Where more than one of them asked for the same item, we went by the larger amount instead of adding them together:" : ""));
+      ov.forEach(function (x) { out.push("- " + nm(x) + ": " + x.asks.map(function (a) { return "#" + a[0] + " asked for " + qu(x, a[1]); }).join(", ") + ", so we went by " + qu(x, x.took)); });
+    }
     // the copy of the packing slip, without the packer's name
     var packed = medDate(slip.shipDate), shipTo = [clean(slip.shipTo), clean(slip.address)].filter(function (x) { return x; }).join(", ");
     out.push("", "PACKING SLIP");
@@ -5163,7 +5216,7 @@ var CORE = (function () {
     tokens: tokens, parseQty: parseQty, toSlipUnits: toSlipUnits, parseComments: parseComments,
     slipData: slipData, readSlipData: readSlipData, audit: audit, logData: logData, labData: labData,
     CODE_LEVELS: CODE_LEVELS, CODES_HEAD: CODES_HEAD, codeFormat: codeFormat, codeLevel: codeLevel, codeFields: codeFields, codeFieldsText: codeFieldsText, codeFromScan: codeFromScan, itemCodes: itemCodes, codesClean: codesClean, codesDiff: codesDiff, codeText: codeText, codeRows: codeRows,
-    computeStock: computeStock, orderState: orderState, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, whOrders: whOrders, whOrderApply: whOrderApply, whOwed: whOwed, hubStock: hubStock, hubAddrOk: hubAddrOk, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
+    computeStock: computeStock, orderState: orderState, orderPlace: orderPlace, mergeOrders: mergeOrders, owedNote: owedNote, dedupe: dedupe, backoffMs: backoffMs, throttleWait: throttleWait, queueFlag: queueFlag, homeBar: homeBar, wakeWanted: wakeWanted, statusChip: statusChip, recvMatch: recvMatch, ocrConf: ocrConf, recvTrust: recvTrust, OCR_SURE: OCR_SURE, stockStatus: stockStatus, weeksCover: weeksCover, whOrdered: whOrdered, whOrders: whOrders, whOrderApply: whOrderApply, whOwed: whOwed, hubStock: hubStock, hubAddrOk: hubAddrOk, countHistory: countHistory, sparkPoints: sparkPoints, orderListHTML: orderListHTML, qrText: qrText, locLabels: locLabels, qrMatrix: qrMatrix, qrSVG: qrSVG, locZPL: locZPL, locSheetHTML: locSheetHTML,
     parseGS1: parseGS1, gs1Date: gs1Date, gtin14: gtin14, gtinValid: gtinValid, upcEtoA: upcEtoA, scanCode: scanCode, lookAlike: lookAlike, scanNeeded: scanNeeded, isStat: isStat, settingsFacts: settingsFacts, settingsFirstRead: settingsFirstRead, diffWords: diffWords, markDiff: markDiff, gtinFind: gtinFind, unknownAdd: unknownAdd, unknownRows: unknownRows, UNKNOWN_HEAD: UNKNOWN_HEAD, gtinApply: gtinApply, scanQty: scanQty, teachMerge: teachMerge, teachPending: teachPending,keypadStep: keypadStep, oneDecimal: oneDecimal, updateStep: updateStep,queueRecord: queueRecord, queueItem: queueItem, mergeQueue: mergeQueue, normalizeSettings: normalizeSettings, settingsRisk: settingsRisk, SETTINGS_DEFAULTS: SETTINGS_DEFAULTS,
     slipHTML: slipHTML, SLIP_CSS: SLIP_CSS, fmtDate: fmtDate, addressText: addressText,
     ROSTER: ROST, streetKey: streetKey, orionMail: orionMail, mailTo: mailTo, nameWords: nameWords, nameScore: nameScore, rosterSite: rosterSite,
@@ -5393,13 +5446,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "b51e90bc60";
+var BUILD = "82d18fadba";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.8 · 13 Nov 2026";
+var VERSION = "1.4.9 · 13 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -6435,7 +6488,7 @@ function renderQueue() {
     actions: '<div class="row"><button class="btn" data-act="blankSlip">Slip without an order</button></div>' }) +
     '<div class="qsearch"><input type="search" id="qSearch" placeholder="' + (S.view === "pack" ? "Practice, order, item or comment" : "Search by practice, order #, item or comment") + '" value="' + esc(QS.q) + '" data-in="qQ" data-enter="qEnter" autocomplete="off" aria-label="Search orders"></div>';
   if (S.pack && !S.view) {
-    head += '<div class="qhead">Packing · 1</div><div class="banner warn"><div class="grow"><b>Slip in progress:</b> ' + esc(S.pack.shipTo || "no ship-to") + (S.pack.order ? " · order #" + S.pack.order : "") + '</div><button class="btn sm primary" data-act="resumePack">Continue packing</button><button class="btn sm danger" data-act="discardDraft">Discard</button></div>';   // Discard as every take-back pill, 600 (steer 05:25 #9)
+    head += '<div class="qhead">Packing · 1</div><div class="banner warn"><div class="grow"><b>Slip in progress:</b> ' + esc(S.pack.shipTo || "no ship-to") + (S.pack.order ? " · order #" + S.pack.order + (S.pack.merged && S.pack.merged.length ? " + #" + S.pack.merged.join(" + #") : "") : "") + '</div><button class="btn sm primary" data-act="resumePack">Continue packing</button><button class="btn sm danger" data-act="discardDraft">Discard</button></div>';   // Discard as every take-back pill, 600 (steer 05:25 #9)
   }
   // Start next (9.3): the first order of the queue (STAT first, then the oldest); not beside an open order
   // list review (High): with a slip in progress the banner's Continue packing is the one red; Start next (which leaves the draft) goes plain
@@ -6448,7 +6501,33 @@ function orderShort(o, st) {
   return o.lines.some(function (l) { var it = itemOf(l.id), r = it ? st.items[l.id] : null; return r && r.onHand != null && C.num(l.ordered) > 0 && C.eachOf(it, l.ordered) > r.onHand; });
 }
 // a BigRow (9.3): the site at 20, the order number and line count under it, chips Rush / Short on the right
-function orderCard(o, st) {
+// a site with more than one open order (John, 13 Nov): its cards say how many, and Merge above the first makes them one slip
+function mergeGroups(list) {
+  var by = {}, out = {};
+  list.forEach(function (o) { var k = C.orderPlace(o, shipName(o)); if (k) (by[k] = by[k] || []).push(o.num); });
+  Object.keys(by).forEach(function (k) { if (by[k].length > 1) by[k].forEach(function (n) { out[n] = by[k]; }); });
+  return out;
+}
+function mergeList(list, stk) {
+  var G = mergeGroups(list), shown = {};
+  return list.map(function (o) {
+    var g = G[o.num], bar = "";
+    if (g && !shown[g[0]]) {
+      shown[g[0]] = 1;
+      var mine = S.pack && !S.pack.follow && S.pack.merged && g.every(function (n) { return n === S.pack.order || S.pack.merged.indexOf(n) >= 0; });
+      bar = '<div class="banner"><div class="grow"><b>' + g.length + " orders</b> for " + esc(shipName(o) || o.practice || "this site") + "</div>" +
+        (mine ? '<button class="btn sm" data-act="resumePack">Packing</button>' : '<button class="btn sm" data-act="mergeOrders" data-nums="' + g.join(",") + '">Merge</button>') + "</div>";
+    }
+    return bar + orderCard(o, stk, g);
+  }).join("");
+}
+ACT.mergeOrders = function (el) {
+  var list = String(el.getAttribute("data-nums") || "").split(",").map(Number).map(function (n) { return S.orders[n]; }).filter(Boolean), m = C.mergeOrders(list, CAT);
+  if (m) confirmLeaveDraft(function () { startPack(m.order, { merged: m.merged, overlap: m.overlap }); });
+};
+// Unmerge: the merged slip set aside, each order back on the list on its own
+ACT.unmerge = function () { if (!S.pack || !S.pack.merged) return; S.pack = null; LS.del("draft"); S.view = ""; render(); window.scrollTo(0, 0); toast("Orders split again"); };
+function orderCard(o, st, g) {
   var n = o.lines.length, w = orderWait(o), age = w >= 2 ? 2 : w;
   return '<button class="ocard' + (o.stat ? " stat" : "") + (age ? " age" + age : "") + '" data-act="openOrder" data-num="' + o.num + '"' + (S.view === "pack" && S.pack && S.pack.order === o.num ? ' aria-current="true"' : "") + ">" +
     '<div class="tx"><div class="t">' + esc(shipName(o) || "(no practice name)") + "</div>" +
@@ -6457,7 +6536,7 @@ function orderCard(o, st) {
     (age || (o.comments && !n) ? '<div class="f">' + (age ? uiChip(age === 2 ? "late" : "wait", { word: "Waiting " + w + (w === 1 ? " day" : " days") }) : "") +
       // said once (steer 15:15): the preview above already shows the comments; was a "Comments" pill on every such card
       (o.comments && !n ? uiChip("low", { word: "Comments only" }) : "") + "</div>" : "") + "</div>" +
-    '<div class="chips">' + (o.stat ? uiChip("rush") : "") + (st && orderShort(o, st) ? uiChip("short") : "") + '</div><span class="chev" aria-hidden="true">' + IC.chevR + '</span></button>';
+    '<div class="chips">' + (o.stat ? uiChip("rush") : "") + (g ? uiChip("low", { word: g.length + " orders" }) : "") + (st && orderShort(o, st) ? uiChip("short") : "") + '</div><span class="chev" aria-hidden="true">' + IC.chevR + '</span></button>';
 }
 // today's packed slips on To pack (9.3), newest first; a tap opens the slip
 function packedToday(stk) {
@@ -6493,7 +6572,7 @@ function queueBody() {
     // three groups (9.3): Due today, Packing (the slip in progress, above), Packed today
     var stk = stock(), done = packedToday(stk);
     return '<div class="qhead">Due today · ' + list.length + "</div>" +
-      (list.length ? '<div class="olist">' + list.map(function (o) { return orderCard(o, stk); }).join("") + "</div>" : '<div class="card"><div class="empty"><b>Nothing to pack right now</b></div></div>') +
+      (list.length ? '<div class="olist">' + mergeList(list, stk) + "</div>" : '<div class="card"><div class="empty"><b>Nothing to pack right now</b></div></div>') +
       (done.length ? '<div class="qhead" style="margin-top:var(--sp-4)">Packed · ' + done.length + '</div><div class="olist">' + done.map(packedRow).join("") + "</div>" : "");
   }
   var openNum = {}; list.forEach(function (o) { openNum[o.num] = 1; });
@@ -6523,7 +6602,7 @@ ACT.qEnter = function () {
 };
 function openOrderSafely(o, force) {
   if (!o) return;
-  if (S.pack && S.pack.order === o.num && !S.pack.follow) { ACT.resumePack(); return; }   // the slip already started for this order
+  if (S.pack && !S.pack.follow && (S.pack.order === o.num || (S.pack.merged || []).indexOf(o.num) >= 0)) { ACT.resumePack(); return; }   // the slip already started for this order
   var st = ordersState();
   if (!force && st.byOrder[o.num]) {
     // a heads-up (John, 6 Oct): this order already has a slip, packed here or on another iPad; what it was, and how to fix a wrong one
@@ -6640,7 +6719,8 @@ function startPack(o, opts) {
     shipTo: o.practice || "", address: o.address || "", contact: o.contact || "", phone: o.phone || "", email: o.email || "",
     comments: o.comments || "", stat: !!o.stat, when: o.when || "",
     lines: lines, sugs: opts.follow ? [] : C.parseComments(o.comments || "", CAT).filter(function (s) { return s.id; }).map(function (s) { s.added = false; return s; }),
-    boxes: 1, by: S.packer || (SET.packers && SET.packers[0]) || "", notes: "", started: new Date().toISOString()
+    boxes: 1, by: S.packer || (SET.packers && SET.packers[0]) || "", notes: opts.merged ? "Merged orders #" + [o.num].concat(opts.merged).join(" + #") : "", started: new Date().toISOString(),
+    merged: opts.merged || null, overlap: opts.overlap || null
   };
   // the ship-to: the location list's exact name and address when the order matches it (or a pick remembered for this name
   // and street); otherwise the packer picks one or types it in (John, 5 Oct)
@@ -6760,6 +6840,7 @@ function renderPack() {
   return '<div class="packhead"><div><h1>' + esc(p.shipTo || "No ship-to") + (p.stat ? " " + uiChip("rush") : "") + "</h1>" +
     '<div class="addr">' + esc(p.address) + "</div>" +
     '<div class="meta">' + (p.order ? '<span>Order <span class="mono">#' + p.order + "</span></span>" : "<span>No order</span>") + (p.follow ? "<span>Backorder</span>" : "") +
+    (p.merged && p.merged.length ? '<span>Merged with ' + p.merged.map(function (n) { return '<span class="mono">#' + n + "</span>"; }).join(", ") + '</span><button class="link" data-act="unmerge">Unmerge</button>' : "") +
     packWhen(p) + (p.contact || p.phone ? "<span>" + esc([p.contact, p.phone].filter(Boolean).join(" · ")) + "</span>" : "") +
     (siteMail({ order: p.order, shipTo: p.shipTo, address: p.address, email: p.email, typed: p.typed }) ? '<span title="The person who ordered gets an email that it was fulfilled, with anything not sent and why">The site gets an email</span>' : "") + "</div></div>" +
     (p.lines.some(function (l) { return !(C.scanNeeded(l, p, SET.pairs) && l.v !== 1); }) ? '<div><button class="btn" data-act="allAsOrdered">' + IC_CHECK + 'Everything as ordered</button></div>' : "") + "</div>" +   // 3.4b: gone when every line asks for a scan
@@ -7173,7 +7254,7 @@ ACT.removeOrder = function () {
 ACT.removeOrderYes = function () {
   var why = ($('input[name="rmWhy"]:checked') || {}).value || "Removed", note = ($("#rmNote").value || "").trim();
   var p = S.pack;
-  var rec = { cid: uid(), type: "Removed from queue", order: p.order, follow: p.follow, shipTo: p.shipTo, address: p.address, contact: p.contact, phone: p.phone, email: p.email,
+  var rec = { cid: uid(), type: "Removed from queue", order: p.order, follow: p.follow, merged: p.merged || null, shipTo: p.shipTo, address: p.address, contact: p.contact, phone: p.phone, email: p.email,
     shipDate: today(), boxes: 0, by: p.by, notes: why + (note ? " — " + note : ""), device: S.device, at: new Date().toISOString(),
     lines: p.follow ? p.lines.map(function (l) { var it = itemOf(l.id); return { id: l.id, ordered: l.ordered, sent: 0, note: "Backorder cancelled", name: l.name, unit: l.unit, p: it ? (it.p || 1) : null }; }) : [] };
   closeSheet(); S.pack = null; LS.del("draft"); S.view = null;
@@ -7235,7 +7316,7 @@ ACT.submitPack = function (el, e, force) {
   // the reminders (John, 6 Oct): a big quantity nobody said is right, more than was ordered, more than the app shows on hand
   var checks = C.submitChecks(p.lines, CAT, onHandMap(stock()));
   if (checks.length) { chkOpen("submit", checks); return; }
-  var rec = { cid: uid(), type: "Packed", order: p.order, follow: p.follow, shipTo: p.shipTo, address: p.address, contact: p.contact, phone: p.phone, email: p.email,
+  var rec = { cid: uid(), type: "Packed", order: p.order, follow: p.follow, merged: p.merged || null, overlap: p.overlap || null, shipTo: p.shipTo, address: p.address, contact: p.contact, phone: p.phone, email: p.email,
     shipDate: today(), boxes: p.boxes, by: p.by, notes: p.notes, mailNote: p.mailNote || "", device: S.device, at: new Date().toISOString(),
     typed: p.typed || null, loc: p.loc || "", dash: packDash(p),
     lines: p.lines.map(function (l, i) {

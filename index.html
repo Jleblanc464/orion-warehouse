@@ -1538,6 +1538,464 @@ var LABCAT = [
 var LAB_DEPTS = ["CHEMISTRY", "MOLECULAR", "BLOOD BANK", "HEME", "COAG", "URINES", "KIT TESTS", "MICRO", "SUPPLIES"];
 if (typeof module !== "undefined") module.exports = { LABCAT: LABCAT, LAB_DEPTS: LAB_DEPTS };
 
+/* Orion Warehouse — the lab items on the lab's stock sheet in SharePoint (LAB INVENTORY TEMPLATE, 18 Nov 2026), for their product codes.
+   Made by tools/lab_items.py from data/lab_inventory_template_2026-11-18.csv; don't edit by hand. */
+var LABITEMS = [
+  {"key": "CHEMISTRY|AMH", "name": "AMH", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08819378190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|ATPO", "name": "ATPO", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07026935190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|B12", "name": "B12", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07028121190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|CORT", "name": "CORT", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027150190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|DHEA", "name": "DHEA", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027192190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|E2", "name": "E2", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027249190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|FERR", "name": "FERR", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027273190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|FOL", "name": "FOL", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027290190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|FPSA", "name": "FPSA", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08828610190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|FSH", "name": "FSH", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08932387190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|FT3", "name": "FT3", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09005811190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|FT4", "name": "FT4", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09043284190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HCG", "name": "HCG", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08890595190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|INS", "name": "INS", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027559190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|LH", "name": "LH", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027575190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|PROG", "name": "PROG", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027699190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|PRL", "name": "PRL", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027737190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|PSA", "name": "PSA", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08791732190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|PTH", "name": "PTH", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08928428190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|SHBG", "name": "SHBG", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07258496190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|T3", "name": "T3", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09007733190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|T4", "name": "T4", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09007784190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|TACRO", "name": "TACRO", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07251254190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|TEST", "name": "TEST", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08946370190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|TSH", "name": "TSH", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08443432190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|TUP", "name": "TUP", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07028105190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|VIT-D", "name": "VIT D", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09038086190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HAV", "name": "HAV", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "8086664190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HAVIGM", "name": "HAVIgM", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07026773190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HBS", "name": "HBS", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08498610160", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HBSAG", "name": "HBSAG", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08814848190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HBCIGM", "name": "HBcIgM", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07026811160", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HCV", "name": "HCV", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08837058190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|CMVIGG", "name": "CMVIgG", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09118551190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|CMVIGM", "name": "CMVIgM", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027133190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|RUB", "name": "RUB", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "07027770190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|SYPH", "name": "SYPH", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "09015051190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HIV", "name": "HIV", "dept": "CHEMISTRY", "section": "Roche Reagents- Immunoassay (cobas e801)", "ref": "08836973160", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|ALB-ALBP", "name": "ALB (ALBP)", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08056714190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|CREAT-S-U", "name": "CREAT (S&U)", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057532190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "2500 TESTS/PACK"},
+  {"key": "CHEMISTRY|MG", "name": "MG", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058016190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "690 TESTS/PACK"},
+  {"key": "CHEMISTRY|TP", "name": "TP", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058652190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1050 TESTS/PACK"},
+  {"key": "CHEMISTRY|TP-URINE", "name": "TP URINE", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058679190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "650 TESTS/PACK"},
+  {"key": "CHEMISTRY|MALB-ALBT2", "name": "MALB (ALBT2)", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08056722190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|A1C", "name": "A1C", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08056668190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|ALP", "name": "ALP", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08056757190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1100 TESTS/PACK"},
+  {"key": "CHEMISTRY|ALT", "name": "ALT", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08104697190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "800 TESTS/PACK"},
+  {"key": "CHEMISTRY|AMY", "name": "AMY", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08056811190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "750 TESTS/PACK"},
+  {"key": "CHEMISTRY|AST", "name": "AST", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08104719190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "800 TESTS/PACK"},
+  {"key": "CHEMISTRY|APOB", "name": "APOB", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08105464190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "250 TESTS/PACK"},
+  {"key": "CHEMISTRY|BIL-D", "name": "BIL D", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08056951190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1000 TESTS/PACK"},
+  {"key": "CHEMISTRY|BIL-T", "name": "BIL T", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "10421436190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1050 TESTS/PACK"},
+  {"key": "CHEMISTRY|C3", "name": "C3", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08105537190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "150 TESTS/PACK"},
+  {"key": "CHEMISTRY|C4", "name": "C4", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08105545190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "150 TESTS/PACK"},
+  {"key": "CHEMISTRY|CA", "name": "CA", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057427190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1500 TESTS/PACK"},
+  {"key": "CHEMISTRY|CARB", "name": "CARB", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057435190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|CHOL", "name": "CHOL", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057443190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "2600 TESTS/PACK"},
+  {"key": "CHEMISTRY|CK", "name": "CK", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057460190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|CO2", "name": "CO2", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057494190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "250 TESTS/PACK"},
+  {"key": "CHEMISTRY|HSCRP", "name": "HSCRP", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057605190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "600 TESTS/PACK"},
+  {"key": "CHEMISTRY|CRP", "name": "CRP", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057591190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|GGT", "name": "GGT", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057796190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "400 TESTS/PACK"},
+  {"key": "CHEMISTRY|GLU", "name": "GLU", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057800190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "3300 TESTS/PACK"},
+  {"key": "CHEMISTRY|HDL", "name": "HDL", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057877190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "700 TESTS/PACK"},
+  {"key": "CHEMISTRY|IRON", "name": "IRON", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057931190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "700 TESTS/PACK"},
+  {"key": "CHEMISTRY|LDH", "name": "LDH", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057958190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|LDL", "name": "LDL", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057966190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "600 TESTS/PACK"},
+  {"key": "CHEMISTRY|LIPASE", "name": "LIPASE", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057982190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "200 TESTS/PACK"},
+  {"key": "CHEMISTRY|LPA-DIAZYME", "name": "LPA DIAZYME", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "DZ131B-KY1", "vendor": "DIAZYME", "unit": "REAGENT PACKS", "pack": "300 TESTS/PACK"},
+  {"key": "CHEMISTRY|LPA-DZ-CDC01", "name": "LPA DZ CDC01", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "8463115190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|LITH", "name": "LITH", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08057974190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|PHNY", "name": "PHNY", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08445567190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|PHOS", "name": "PHOS", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058610190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "750 TESTS/PACK"},
+  {"key": "CHEMISTRY|PREALB", "name": "PREALB", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08252645190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "200 TESTS/PACK"},
+  {"key": "CHEMISTRY|TRIG", "name": "TRIG", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058687190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1000 TESTS/PACK"},
+  {"key": "CHEMISTRY|TRANSF", "name": "TRANSF", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058733190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "500 TESTS/PACK"},
+  {"key": "CHEMISTRY|UA", "name": "UA", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058750190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "1300 TESTS/PACK"},
+  {"key": "CHEMISTRY|UIBC", "name": "UIBC", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058776190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "100 TESTS/PACK"},
+  {"key": "CHEMISTRY|UREA-BUN", "name": "UREA (BUN)", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058806190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "600 TESTS/PACK"},
+  {"key": "CHEMISTRY|VALP", "name": "VALP", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08445575190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "200 TESTS/PACK"},
+  {"key": "CHEMISTRY|VANC", "name": "VANC", "dept": "CHEMISTRY", "section": "Roche Reagents- Chemistry (cobas c503)", "ref": "08058849190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "200 TESTS/PACK"},
+  {"key": "CHEMISTRY|AMP", "name": "AMP", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "8056781190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|BARB", "name": "BARB", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08056889190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|BENZ", "name": "BENZ", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08056927190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|BUP", "name": "BUP", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "09067752190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "240 TESTS/PACK"},
+  {"key": "CHEMISTRY|COC", "name": "COC", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08057508190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|ETH", "name": "ETH", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08057630190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|FENT", "name": "FENT", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "10427531190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|MDN", "name": "MDN", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08058008190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|OPI", "name": "OPI", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08058113190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "700 TESTS/PACK"},
+  {"key": "CHEMISTRY|OXY", "name": "OXY", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "09026916190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "200 TESTS/PACK"},
+  {"key": "CHEMISTRY|THC", "name": "THC", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08771669190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "150 TESTS/PACK"},
+  {"key": "CHEMISTRY|SVTCR", "name": "SVTCR", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "09008144190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "850 TESTS/PACK"},
+  {"key": "CHEMISTRY|SVTOX", "name": "SVTOX", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08771758190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "210 TESTS/PACK"},
+  {"key": "CHEMISTRY|SVTPH", "name": "SVTPH", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08771766190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "240 TESTS/PACK"},
+  {"key": "CHEMISTRY|SVTSG", "name": "SVTSG", "dept": "CHEMISTRY", "section": "Roche Drugs- Chemistry (c503)", "ref": "08771782190", "vendor": "ROCHE", "unit": "REAGENT PACKS", "pack": "220 TESTS/PACK"},
+  {"key": "CHEMISTRY|CARTRIDGE-NA", "name": "Cartridge NA", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "10825468001", "vendor": "ROCHE", "unit": "ELECTRODES", "pack": "9000 TESTS/PACK"},
+  {"key": "CHEMISTRY|CARTRIDGE-K", "name": "Cartridge K", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "10825441001", "vendor": "ROCHE", "unit": "ELECTRODES", "pack": "9000 TESTS/PACK"},
+  {"key": "CHEMISTRY|CARTRIDGE-CL", "name": "Cartridge CL", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "3246353001", "vendor": "ROCHE", "unit": "ELECTRODES", "pack": "9000 TESTS/PACK"},
+  {"key": "CHEMISTRY|REFERENCE-ELECTRODE", "name": "Reference Electrode", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "3149501001", "vendor": "ROCHE", "unit": "ELECTRODES", "pack": "1 ELECTRODE"},
+  {"key": "CHEMISTRY|ACTIVATOR", "name": "Activator", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "04663632190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "9 PER BOX"},
+  {"key": "CHEMISTRY|ISE-CLEANING-ELECSYS-SYSCLEAN", "name": "ISE Cleaning/Elecsys SysClean", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "11298500160", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "5 PER BOX"},
+  {"key": "CHEMISTRY|ISE-STANDARD-LOW", "name": "ISE Standard Low", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "11183974216", "vendor": "ROCHE", "unit": "BOXES", "pack": "10 PER BOX"},
+  {"key": "CHEMISTRY|ISE-STANDARD-HIGH", "name": "ISE Standard High", "dept": "CHEMISTRY", "section": "Roche ISE Module", "ref": "11183982216", "vendor": "ROCHE", "unit": "BOXES", "pack": "10 PER BOX"},
+  {"key": "CHEMISTRY|AMH-CAL", "name": "AMH CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09013326190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TPO-CAL", "name": "TPO CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "06472931190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|CORT-CAL", "name": "CORT CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "06687750190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|DHEA-CAL", "name": "DHEA CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "03000095122", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|E2-CAL", "name": "E2 CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "06656048190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|FERR-CAL", "name": "FERR CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "03737586190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|FOL-CAL", "name": "FOL CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "07396473190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|FPSA-CAL", "name": "FPSA CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "08851964190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|FSH-CAL", "name": "FSH CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09557440190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|FT3-CAL", "name": "FT3 CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09077871190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|FT4-CAL", "name": "FT4 CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09043292160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|HCG-CAL", "name": "HCG CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09013296190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|INS-CAL", "name": "INS CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "12017504122", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|LH-CAL", "name": "LH CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09557423190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PROG-CAL", "name": "PROG CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "07092547190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PRL-CAL", "name": "PRL CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "03277356190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PTH-CAL", "name": "PTH CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "08928487190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|SHBG-CAL", "name": "SHBG CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "03052028190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TACRO-CAL", "name": "TACRO CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "05889065190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|T3-CAL", "name": "T3 CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "11731548122", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|T4-CAL", "name": "T4 CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "12017717122", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TESTO-CAL", "name": "TESTO CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "05202230190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TPSA-CAL", "name": "TPSA CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "08838534160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TSH-CAL", "name": "TSH CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "08443459160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TUP-CAL", "name": "TUP CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "06528309190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|B12-CAL", "name": "B12 CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "07212780190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|VITD-CAL", "name": "VITD CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Immunoassay (e801)", "ref": "09038116190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|CFAS", "name": "CFAS", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "10759350360", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "12 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|CFAS-PROT", "name": "CFAS PROT", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "11355279160", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "5 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|CFAS-LIPID", "name": "CFAS LIPID", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "12172623160", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "3 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|CFAS-A1C", "name": "CFAS A1C", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "04528417190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "3 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|CFAS-PUC", "name": "CFAS PUC", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "03121305122", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "5 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|CFAS-PAC", "name": "CFAS PAC", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "03555941190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "3 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PS-TDM", "name": "PS TDM", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "03375790190", "vendor": "ROCHE", "unit": "SET", "pack": "6 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PS-LPA", "name": "PS LPA", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "5852641160", "vendor": "ROCHE", "unit": "BOXES", "pack": "5 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PS-DAT-I", "name": "PS DAT I", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "03304671190", "vendor": "ROCHE", "unit": "SET", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|PSDAT-II", "name": "PSDAT II", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "03304680190", "vendor": "ROCHE", "unit": "SET", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|BUP-CAL", "name": "BUP CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "08239894190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|FENT-CAL", "name": "FENT CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "09330097190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|OXY-CAL", "name": "OXY CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "05178517190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|SVT-CREAT-CAL", "name": "SVT CREAT CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "04712404190", "vendor": "ROCHE", "unit": "SET", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|SVT-OX-CAL", "name": "SVT OX CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "4712447190", "vendor": "ROCHE", "unit": "SET", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|SVT-PH-CAL", "name": "SVT PH CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "04712463190", "vendor": "ROCHE", "unit": "SET", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|SVT-SG-CAL", "name": "SVT SG CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "04712471190", "vendor": "ROCHE", "unit": "SET", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|LPA-DIAZYME-CALIBRATOR", "name": "LPA DIAZYME Calibrator", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "DZ131B-CAL", "vendor": "DIAZYME", "unit": "BOXES", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|AEC-CAL", "name": "AEC CAL", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "20751995190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|FE-STD", "name": "FE STD", "dept": "CHEMISTRY", "section": "Roche Calibrators- Chemistry (c503)", "ref": "12146401160", "vendor": "ROCHE", "unit": "BOXES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-MULTIQUAL-1", "name": "INTELIQ MULTIQUAL 1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12008256", "vendor": "BIORAD", "unit": "BOXES", "pack": "12 TUBES/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-MULTIQUAL-3", "name": "INTELIQ MULTIQUAL 3", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12008258", "vendor": "BIORAD", "unit": "BOXES", "pack": "12 TUBES/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-IMMUNOLOGY-1", "name": "INTELIQ IMMUNOLOGY 1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12009941", "vendor": "BIORAD", "unit": "BOXES", "pack": "6 TUBES/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-IMMUNOLOGY-3", "name": "INTELIQ IMMUNOLOGY 3", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12009943", "vendor": "BIORAD", "unit": "BOXES", "pack": "6 TUBES/BOX"},
+  {"key": "CHEMISTRY|LIQUICHECK-DIABETES-1", "name": "LIQUICHECK DIABETES 1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12011343", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "6 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|LIQUICHECK-DIABETES-2", "name": "LIQUICHECK DIABETES 2", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12011344", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "6 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-CARDIAC-MARKERS-1", "name": "INTELIQ CARDIAC MARKERS 1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12009955", "vendor": "BIORAD", "unit": "BOXES", "pack": "6 TUBES/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-CARDIAC-MARKERS-3", "name": "INTELIQ CARDIAC MARKERS 3", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12009957", "vendor": "BIORAD", "unit": "BOXES", "pack": "6 TUBES/BOX"},
+  {"key": "CHEMISTRY|LIQUICHEK-OPIATE-2", "name": "LIQUICHEK OPIATE 2", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "12005787", "vendor": "BIORAD", "unit": "BOXES", "pack": "6 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PCCC1", "name": "PCCC1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "5947626160", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PCCC2", "name": "PCCC2", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "5947774160", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PN-PUC", "name": "PN PUC", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "03121313122", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|PP-PUC", "name": "PP PUC", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "03121291122", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|TOX-NEG-CTRL", "name": "TOX NEG CTRL", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "460", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|TOX-POS-CTRL", "name": "TOX POS CTRL", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "455", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "6 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|SVT-CTRL1", "name": "SVT CTRL1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "4712498190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|SVT-CTRL4", "name": "SVT CTRL4", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "5122970190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|SVT-CTRL5", "name": "SVT CTRL5", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "5122988190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|OPI-CTRL", "name": "OPI CTRL", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "09330119190", "vendor": "ROCHE", "unit": "SETS", "pack": "1 BOTTLE/BOX"},
+  {"key": "CHEMISTRY|URINE-CHEM1", "name": "URINE CHEM1", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "397", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "12 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|URINE-CHEM2", "name": "URINE CHEM2", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "398", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "12 BOTTLES/BOX"},
+  {"key": "CHEMISTRY|LPA-DIAZYME-QC", "name": "LPA DIAZYME QC", "dept": "CHEMISTRY", "section": "Roche QC- Chemistry (c503)", "ref": "DZ131B-CON", "vendor": "DIAZYME", "unit": "BOXES", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-IMMUNOASSAY-PLUS-1", "name": "INTELIQ IMMUNOASSAY PLUS 1", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "12009948", "vendor": "BIORAD", "unit": "BOXES", "pack": "12 TUBES/BOX"},
+  {"key": "CHEMISTRY|INTELIQ-IMMUNOASSAY-PLUS-3", "name": "INTELIQ IMMUNOASSAY PLUS 3", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "12009950", "vendor": "BIORAD", "unit": "BOXES", "pack": "12 TUBES/BOX"},
+  {"key": "CHEMISTRY|PC-HAV", "name": "PC HAV", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "8086672190", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PCHAVIGM", "name": "PCHAVIGM", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "11876368122", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-HBS", "name": "PC HBS", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "11876317160", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-HBSAG", "name": "PC HBSAG", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "04687876160", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-HBCIGM", "name": "PC HBCIGM", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "11876333160", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-HCV", "name": "PC HCV", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "03290379190", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-CMVIGG", "name": "PC CMVIGG", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "04784600160", "vendor": "ROCHE", "unit": "SETS", "pack": "5 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-CMVIGM", "name": "PC CMVIGM", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "04784626190", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-RUB", "name": "PC RUB", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "04618807160", "vendor": "ROCHE", "unit": "SETS", "pack": "8 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-AMH", "name": "PC AMH", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "06709966190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-SYPH", "name": "PC SYPH", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "06923364190", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-VARIA", "name": "PC VARIA", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "05618860160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|HIV-GEN", "name": "HIV GEN", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "06924107160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|HIV-GRPO", "name": "HIV GRPO", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "06924115160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-THYRO", "name": "PC THYRO", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "05042666191", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-VITD", "name": "PC VITD", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "09038124190", "vendor": "ROCHE", "unit": "BOXES", "pack": "3 SETS/BOX"},
+  {"key": "CHEMISTRY|PC-UNIVERSAL", "name": "PC UNIVERSAL", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "11731416160", "vendor": "ROCHE", "unit": "BOXES", "pack": "2 SETS/BOX"},
+  {"key": "CHEMISTRY|TACRO-PS-ISD", "name": "TACRO PS ISD", "dept": "CHEMISTRY", "section": "Roche QC-Immunoassay (e801)", "ref": "05889081160", "vendor": "ROCHE", "unit": "BOXES", "pack": "1 SET/BOX"},
+  {"key": "CHEMISTRY|A1CD-DILUENT", "name": "A1CD (Diluent)", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "8463107190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|NACL", "name": "NaCl", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08063494190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|SCCS", "name": "SCCS", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08463093190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|SI2", "name": "SI2", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08063516190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|START", "name": "START", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08059322190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|NAOHD", "name": "NaOHD", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08063451190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|SMS", "name": "SMS", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08063478190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|ECO-D", "name": "ECO-D", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08063354190", "vendor": "ROCHE", "unit": "REAGENT PACKS"},
+  {"key": "CHEMISTRY|DILUENT-UNIVERSAL", "name": "Diluent Universal", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "7299001190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|DILUENT-MULTIASSAY", "name": "Diluent MultiAssay", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "7299010190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|ISE-DILUENT-GEN-2", "name": "ISE Diluent Gen.2", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "4880480190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|ISE-INTERNAL-STANDARD-GEN-2", "name": "ISE Internal Standard Gen.2", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "4880455190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|ISE-REFERENCE-ELECTROLYTE", "name": "ISE Reference Electrolyte", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "8392013190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|ACID-WASH", "name": "Acid Wash", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08302723190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|BASIC-WASH", "name": "Basic Wash", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "08302545190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|PRECLEAN-II-M", "name": "PreClean II M", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "6908853190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|PROCELL-II-M", "name": "ProCell II M", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "6908799190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|CLEANCELL-M", "name": "CleanCell M", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "4880293190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|ISD-SAMPLE-PRETREATMENT", "name": "ISD Sample Pretreatment", "dept": "CHEMISTRY", "section": "Roche Bulk & System Solutions", "ref": "5889073190", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|ASSAYTIP-ASSAYCUP-TRAY", "name": "AssayTip / AssayCup Tray", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "5694302001", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|REACTION-CELL-C-503-C513", "name": "Reaction Cell c 503 / c513", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "7700814001", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|LAMP-HALOGEN-ASSY-12V-50W", "name": "LAMP HALOGEN ASSY 12V/50W", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "4813707001", "vendor": "ROCHE", "unit": "LAMPS"},
+  {"key": "CHEMISTRY|CONTROLSET-VIALS", "name": "ControlSet Vials", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "3142949122", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|CALSET-VIALS", "name": "CalSet Vials", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "11776576322", "vendor": "ROCHE", "unit": "BOXES"},
+  {"key": "CHEMISTRY|SAMPLE-CUP", "name": "Sample Cup", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "10394246001", "vendor": "ROCHE", "unit": "BAGS"},
+  {"key": "CHEMISTRY|FALSE-BOTTOM-TUBE", "name": "False Bottom Tube", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "4740955001", "vendor": "ROCHE", "unit": "BAGS", "pack": "2 BAGS/BOX"},
+  {"key": "CHEMISTRY|1-5ML-MCT-GRADUATED-NATURAL", "name": "1.5mL MCT Graduated Natural", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "05-408-129", "vendor": "FISHER", "unit": "BAGS"},
+  {"key": "CHEMISTRY|ISE-PROBE", "name": "ISE Probe", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "8763313001", "vendor": "ROCHE", "unit": "PROBES"},
+  {"key": "CHEMISTRY|REAGENT-PROBE", "name": "Reagent Probe", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "8762686001", "vendor": "ROCHE", "unit": "PROBES"},
+  {"key": "CHEMISTRY|S1-PROBE", "name": "S1 Probe", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "8762651001", "vendor": "ROCHE", "unit": "PROBES"},
+  {"key": "CHEMISTRY|S2-PROBE", "name": "S2 Probe", "dept": "CHEMISTRY", "section": "Roche Consumables & Supplies", "ref": "8762660001", "vendor": "ROCHE", "unit": "PROBES"},
+  {"key": "MOLECULAR|UTILITY-CHANNEL-REAGENT-KIT", "name": "UTILITY CHANNEL REAGENT KIT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "9052011190", "vendor": "ROCHE", "unit": "KIT", "pack": "192 TESTS/KIT"},
+  {"key": "MOLECULAR|UC-TIB-HSV-VZV-RUO-HSV-CTRL", "name": "UC-TIB-HSV/VZV-RUO (HSV + CTRL)", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "40-0424-UC-R", "vendor": "ROCHE", "unit": "BOXES", "pack": "1 PRIMER/PROBE PER BOX", "inner": "2 QC PER BOX"},
+  {"key": "MOLECULAR|AMBION-NUCLEASE-FREE-WATER", "name": "AMBION NUCLEASE-FREE WATER", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "AM9930", "vendor": "FISHER", "unit": "BOTTLES", "pack": "500 mL"},
+  {"key": "MOLECULAR|CT-NG-REAGENT", "name": "CT/NG REAGENT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "9040501190", "vendor": "ROCHE", "unit": "CASSETTES", "pack": "480 TESTS/CASSETTE"},
+  {"key": "MOLECULAR|TV-MG-REAGENT", "name": "TV/MG REAGENT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "9040633190", "vendor": "ROCHE", "unit": "CASSETTES", "pack": "384 TESTS/CASSETTE"},
+  {"key": "MOLECULAR|CT-NG-POSITIVE-CONTROL-KIT", "name": "CT/NG POSITIVE CONTROL KIT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "9040510190", "vendor": "ROCHE", "unit": "CASSETTES", "pack": "16 CONTROLS/CASSETTE"},
+  {"key": "MOLECULAR|TV-MG-POSITIVE-CONTROL-KIT", "name": "TV/MG POSITIVE CONTROL KIT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "9040641190", "vendor": "ROCHE", "unit": "CASSETTES", "pack": "16 CONTROLS/CASSETTE"},
+  {"key": "MOLECULAR|BUFFER-NEGATIVE-CONTROL-KIT", "name": "BUFFER NEGATIVE CONTROL KIT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "9051953190", "vendor": "ROCHE", "unit": "CASSETTES", "pack": "16 CONTROLS/CASSETTE"},
+  {"key": "MOLECULAR|MGP-REAGENT", "name": "MGP REAGENT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "6997546190", "vendor": "ROCHE", "unit": "CASSETTES", "pack": "480 TESTS/CASSETTE"},
+  {"key": "MOLECULAR|COBAS-OMNI-LYSIS", "name": "cobas OMNI LYSIS", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "6997538190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "MOLECULAR|COBAS-OMNI-SPEC-DILUENT", "name": "cobas OMNI SPEC DILUENT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "6997511190", "vendor": "ROCHE", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "MOLECULAR|WASH-REAGENT", "name": "WASH REAGENT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "6997503190", "vendor": "ROCHE", "unit": "BOXES", "pack": "1 BOTTLE/BOX"},
+  {"key": "MOLECULAR|AMPLIFICATION-PLATES", "name": "AMPLIFICATION PLATES", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "5534941001", "vendor": "ROCHE", "unit": "BOXES", "pack": "8 STACKS/BOX", "inner": "4 AMP PLATES/STACK"},
+  {"key": "MOLECULAR|PROCESSING-PLATES", "name": "PROCESSING PLATES", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "5534917001", "vendor": "ROCHE", "unit": "BOXES", "pack": "32 PLATES/BOX"},
+  {"key": "MOLECULAR|PIPETTE-TIPS", "name": "PIPETTE TIPS", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "5534925001", "vendor": "ROCHE", "unit": "BOXES", "pack": "16 TIPS BOXES/BOX"},
+  {"key": "MOLECULAR|PCR-REPLACEMENT-CAPS", "name": "PCR REPLACEMENT CAPS", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "7958056190", "vendor": "ROCHE", "unit": "BAGS", "pack": "1 BAG/BOX", "inner": "1000 CAPS/BAG"},
+  {"key": "MOLECULAR|SOLID-WASTE-BAG-W-INSERT", "name": "SOLID WASTE BAG W/ INSERT", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "8030073001", "vendor": "ROCHE", "unit": "BAGS", "pack": "20 BAGS/ORDER"},
+  {"key": "MOLECULAR|ROHREN-TUBES-15-7X100MM-11-5ML", "name": "ROHREN TUBES (15.7x100mm, 11.5mL)", "dept": "MOLECULAR", "section": "cobas 8800 ANALYZER", "ref": "55.466", "vendor": "SARSTEDT", "unit": "BOXES", "pack": "250 TUBES/BOX"},
+  {"key": "MOLECULAR|BD-RESPIRATORY-VIRAL-PANEL", "name": "BD RESPIRATORY VIRAL PANEL", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "445373", "vendor": "BD", "unit": "BOXES", "pack": "24 TESTS/BOX"},
+  {"key": "MOLECULAR|BD-VAGINAL-PANEL", "name": "BD VAGINAL PANEL", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "443712", "vendor": "BD", "unit": "BOXES", "pack": "24 TESTS/BOX"},
+  {"key": "MOLECULAR|BD-STAPHSR-PANEL", "name": "BD StaphSR PANEL", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "443419", "vendor": "BD", "unit": "BOXES", "pack": "24 TESTS/BOX"},
+  {"key": "MOLECULAR|BD-ENTERIC-BACTERIAL-PANEL", "name": "BD ENTERIC BACTERIAL PANEL", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "442963", "vendor": "BD", "unit": "BOXES", "pack": "24 TESTS/BOX"},
+  {"key": "MOLECULAR|FLU-RSV-SARS-COV-2-CONTROL-PANEL", "name": "FLU/RSV/SARS-CoV-2 CONTROL PANEL", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "8246", "vendor": "MICROBIOLOGICS", "unit": "BOXES", "pack": "6 POS SWABS/BOX", "inner": "6 NEG SWABS/BOX"},
+  {"key": "MOLECULAR|VAGINAL-CONTROL-PANEL", "name": "VAGINAL CONTROL PANEL", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "8209", "vendor": "MICROBIOLOGICS", "unit": "BOXES", "pack": "6 POS SWABS/BOX", "inner": "6 NEG SWABS/BOX"},
+  {"key": "MOLECULAR|S-EPIDERMIDIS-12228-NEG-STAPH-QC", "name": "S. EPIDERMIDIS 12228 (NEG STAPH QC)", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "0371P", "vendor": "MICROBIOLOGICS", "unit": "BOXES", "pack": "2 SWABS/BOX"},
+  {"key": "MOLECULAR|S-AUREUS-29213-POS-MSSA-QC", "name": "S. AUREUS 29213 (POS MSSA QC)", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "0365P", "vendor": "MICROBIOLOGICS", "unit": "BOXES", "pack": "2 SWABS/BOX"},
+  {"key": "MOLECULAR|S-AUREUS-4330-POS-MRSA-QC", "name": "S. AUREUS 4330 (POS MRSA QC)", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "0852P", "vendor": "MICROBIOLOGICS", "unit": "BOXES", "pack": "2 SWABS/BOX"},
+  {"key": "MOLECULAR|ENTERIC-QC", "name": "ENTERIC QC", "dept": "MOLECULAR", "section": "BD MAX ANALYZER"},
+  {"key": "MOLECULAR|PCR-CARTRIDGE", "name": "PCR CARTRIDGE", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "437519", "vendor": "BD", "unit": "BOXES", "pack": "24 CARDS/BOX"},
+  {"key": "MOLECULAR|BD-SWAB-SAMPLE-BUFFER-TUBE-GREEN", "name": "BD SWAB SAMPLE BUFFER TUBE (GREEN)", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "440296", "vendor": "BD", "unit": "STRIPS", "pack": "48 TUBES/BOX", "inner": "12 TUBES/STRIP"},
+  {"key": "MOLECULAR|PIERCEABLE-CAPS", "name": "PIERCEABLE CAPS", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "ref": "440295", "vendor": "BD", "unit": "BOXES", "pack": "200 CAPS/BOX"},
+  {"key": "MOLECULAR|DISPOSABLE-YELLOW-LOOPS-10-UL", "name": "DISPOSABLE YELLOW LOOPS (10 uL)", "dept": "MOLECULAR", "section": "BD MAX ANALYZER", "pack": "10 LOOPS/BAG"},
+  {"key": "BLOOD BANK|BLOOD-BANK-SALINE", "name": "BLOOD BANK SALINE", "dept": "BLOOD BANK", "ref": "535-435", "vendor": "FISHER", "unit": "BOXES", "pack": "5 GALLONS"},
+  {"key": "BLOOD BANK|DISPOSABLE-CULTURE-TUBES", "name": "DISPOSABLE CULTURE TUBES", "dept": "BLOOD BANK", "ref": "14-961-26", "vendor": "FISHER", "unit": "BOXES", "pack": "4 SLEEVES/BOX", "inner": "250 TUBES/SLEEVE"},
+  {"key": "BLOOD BANK|ORTHO-CONFIDENCE-QC", "name": "ORTHO CONFIDENCE QC", "dept": "BLOOD BANK", "ref": "6141123", "vendor": "QUIDELORTHO?", "unit": "BOXES", "pack": "2 CELL BOTTLES/SET (CELL 1 & CELL 2)", "inner": "2 ANTIBODY BOTTLES/SET"},
+  {"key": "BLOOD BANK|SOLIDSCREEN-II-NEG-CTRL", "name": "SOLIDSCREEN II NEG CTRL", "dept": "BLOOD BANK", "ref": "806509100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "BLOOD BANK|ANTI-A", "name": "ANTI-A", "dept": "BLOOD BANK", "ref": "801325100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "BLOOD BANK|ANTI-B", "name": "ANTI-B", "dept": "BLOOD BANK", "ref": "801350100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "BLOOD BANK|ANTI-AB", "name": "ANTI-AB", "dept": "BLOOD BANK", "ref": "801375100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "BLOOD BANK|ANTI-D", "name": "ANTI-D", "dept": "BLOOD BANK", "ref": "802042100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "BLOOD BANK|SERACLONE-CTRL-ABO-RH", "name": "SERACLONE CTRL ABO+Rh", "dept": "BLOOD BANK", "ref": "805171100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "BLOOD BANK|BIOTESTCELL-A1-B", "name": "BIOTESTCELL A1 & B", "dept": "BLOOD BANK", "ref": "816057100", "vendor": "BIORAD", "unit": "BOXES", "pack": "1 SET (A&B) BOTTLES/BOX"},
+  {"key": "BLOOD BANK|BIOTESTCELL-1-2", "name": "BIOTESTCELL 1 & 2", "dept": "BLOOD BANK", "ref": "816014100", "vendor": "BIORAD", "unit": "BOXES", "pack": "1 SET (1&2) BOTTLES/BOX"},
+  {"key": "BLOOD BANK|MLB-2-LISS", "name": "MLB 2 (LISS)", "dept": "BLOOD BANK", "ref": "805200100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "BLOOD BANK|ANTI-IGG", "name": "ANTI-IGG", "dept": "BLOOD BANK", "ref": "804175100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "BLOOD BANK|COOMBSCELL-E", "name": "COOMBSCELL-E", "dept": "BLOOD BANK", "ref": "816030100", "vendor": "BIORAD", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "HEME|CELL-PACK-DCL-NAVY", "name": "CELL PACK DCL (NAVY)", "dept": "HEME", "section": "CBC'S", "ref": "DCL-300A", "vendor": "Sysmex", "unit": "BOXES", "pack": "20 LITERS"},
+  {"key": "HEME|WNR-LYSERCELL-GREEN", "name": "WNR LYSERCELL (GREEN)", "dept": "HEME", "section": "CBC'S", "ref": "ZA900002", "vendor": "Sysmex", "unit": "BOXES", "pack": "5 LITERS"},
+  {"key": "HEME|WDF-LYSERCELL-CYAN", "name": "WDF LYSERCELL (CYAN)", "dept": "HEME", "section": "CBC'S", "ref": "ZA900001", "vendor": "Sysmex", "unit": "BOXES", "pack": "5 LITERS"},
+  {"key": "HEME|CELL-PACK-DFL-PURPLE", "name": "CELL PACK DFL (PURPLE)", "dept": "HEME", "section": "CBC'S", "ref": "BT-965-910", "vendor": "Sysmex", "unit": "CARTON", "pack": "2 CARTONS/BOX"},
+  {"key": "HEME|SULFOLYSER-PINK", "name": "SULFOLYSER (PINK)", "dept": "HEME", "section": "CBC'S", "ref": "BJ-350-971", "vendor": "Sysmex", "unit": "CARTON", "pack": "2 CARTONS/BOX"},
+  {"key": "HEME|WNR-FLOUROCELL-SMALL-GREEN", "name": "WNR FLOUROCELL (SMALL GREEN)", "dept": "HEME", "section": "CBC'S", "ref": "CP-066-715", "vendor": "Sysmex", "unit": "REAGENT PACK", "pack": "2 REAGENT PACKS/BOX"},
+  {"key": "HEME|WDF-FLOUROCELL-SMALL-CYAN", "name": "WDF FLOUROCELL (SMALL CYAN)", "dept": "HEME", "section": "CBC'S", "ref": "CV-377-552", "vendor": "Sysmex", "unit": "REAGENT PACK", "pack": "2 REAGENT PACKS/BOX"},
+  {"key": "HEME|PLT-FLOUROCELL-ORANGE", "name": "PLT FLOUROCELL (ORANGE)", "dept": "HEME", "section": "CBC'S", "ref": "CD-994-563", "vendor": "Sysmex", "unit": "REAGENT PACK", "pack": "2 REAGENT PACKS/BOX"},
+  {"key": "HEME|RET-FLOUROCELL-RED", "name": "RET FLOUROCELL (RED)", "dept": "HEME", "section": "CBC'S", "ref": "BN-337-547", "vendor": "Sysmex", "unit": "REAGENT PACK", "pack": "2 REAGENT PACKS/BOX"},
+  {"key": "HEME|CELL-CLEAN-BLACK", "name": "CELL CLEAN (BLACK)", "dept": "HEME", "section": "CBC'S", "ref": "CF-579-595", "vendor": "Sysmex", "unit": "BOXES", "pack": "20 TUBES/BOX"},
+  {"key": "HEME|SUPERFROST-MICROSCOPE-SLIDES", "name": "SUPERFROST MICROSCOPE SLIDES", "dept": "HEME", "section": "CBC'S", "ref": "12550123", "vendor": "Fisherbrand", "unit": "SLIDE BOXES", "pack": "20 SLIDE BOXES/SHIPPING BOX"},
+  {"key": "HEME|WRIGHT-STAIN", "name": "WRIGHT STAIN", "dept": "HEME", "section": "CBC'S", "ref": "264-981", "vendor": "Fisherbrand", "unit": "BOTTLES", "pack": "1 GALLON BOTTLES"},
+  {"key": "HEME|METHANOL", "name": "METHANOL", "dept": "HEME", "section": "CBC'S", "ref": "A412-1", "vendor": "Fisherbrand", "unit": "BOTTLES"},
+  {"key": "HEME|HEME-BUFFER-PH-6-8", "name": "HEME BUFFER (pH 6.8)", "dept": "HEME", "section": "CBC'S", "ref": "VWB—032", "vendor": "Fisherbrand", "unit": "BOTTLES", "pack": "1 LITER BOTTLES"},
+  {"key": "HEME|DIFF-SAFE", "name": "DIFF SAFE", "dept": "HEME", "section": "CBC'S", "ref": "101", "vendor": "Alpha Scientific", "unit": "BAGS", "pack": "100 PER BAG"},
+  {"key": "HEME|2-SLIDE-HOLDER-PATH-REVIEW", "name": "2 SLIDE HOLDER (PATH REVIEW)", "dept": "HEME", "section": "CBC'S", "ref": "12-587-16", "vendor": "Fisherbrand", "unit": "PACKS", "pack": "36 SLIDE HOLDERS/PACK"},
+  {"key": "HEME|XN-CHECK-CBC-QC", "name": "XN CHECK (CBC QC)", "dept": "HEME", "section": "CBC'S", "ref": "213499", "vendor": "Sysmex", "unit": "PACKS", "pack": "4 QC SETS/PACK"},
+  {"key": "HEME|XN-CHECK-BF-BODY-FLUID-QC", "name": "XN CHECK BF (BODY FLUID QC)", "dept": "HEME", "section": "BODY FLUIDS", "ref": "213516", "vendor": "Sysmex", "unit": "PACKS", "pack": "3 QC SETS/PACK"},
+  {"key": "HEME|CELL-CHEX-MANUAL-BF-QC", "name": "CELL-CHEX (MANUAL BF QC)", "dept": "HEME", "section": "BODY FLUIDS", "ref": "212431", "vendor": "Streck", "unit": "PACKS", "pack": "1 QC SET/PACK"},
+  {"key": "HEME|ACETIC-ACID-GLACIAL", "name": "ACETIC ACID, GLACIAL", "dept": "HEME", "section": "BODY FLUIDS", "ref": "AX0073-6", "vendor": "Fisherbrand", "unit": "BOTTLES", "pack": "500 ML GLASS BOTTLE"},
+  {"key": "HEME|HEMOCYTOMETER", "name": "HEMOCYTOMETER", "dept": "HEME", "section": "BODY FLUIDS", "ref": "DHC-N404", "vendor": "Bulldog Bio", "unit": "HEMOCYTOMETERS", "pack": "10 HEMOCYTOMETERS/PACK"},
+  {"key": "HEME|CYTOFUGE-FILTER-PAPER", "name": "CYTOFUGE FILTER PAPER", "dept": "HEME", "section": "BODY FLUIDS", "ref": "M968FW", "vendor": "Simport Scientific", "unit": "PACKS", "pack": "200 PER PACK"},
+  {"key": "HEME|SEDITROL-SED-RATE-CONTROLS", "name": "SEDITROL SED RATE CONTROLS", "dept": "HEME", "section": "SED RATES", "ref": "DSC06", "vendor": "Alcor Scientific", "unit": "SETS", "pack": "3 SETS/PACK"},
+  {"key": "HEME|SED-RATE-TEST-CARD", "name": "SED RATE TEST CARD", "dept": "HEME", "section": "SED RATES", "ref": "120-****", "vendor": "Alcor Scientific", "unit": "TESTS"},
+  {"key": "HEME|IWASH-500-ML-ELITE", "name": "iWASH 500 ML (ELITE)", "dept": "HEME", "section": "SED RATES", "ref": "112-12-001", "vendor": "Alcor Scientific", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "HEME|IWASH-PRO-1-8-L", "name": "iWASH PRO 1.8 L", "dept": "HEME", "section": "SED RATES", "ref": "112-12-006", "vendor": "Alcor Scientific", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "HEME|DEEP-CLEAN-ELITE", "name": "DEEP CLEAN ELITE", "dept": "HEME", "section": "SED RATES", "ref": "112-12-020", "vendor": "Alcor Scientific", "unit": "BOXES", "pack": "3 TUBES/BOX"},
+  {"key": "HEME|DEEP-CLEAN-PRO", "name": "DEEP CLEAN PRO", "dept": "HEME", "section": "SED RATES", "ref": "112-12-022", "vendor": "Alcor Scientific", "unit": "TUBES", "pack": "3 TUBES/BOX"},
+  {"key": "COAG|DADE-INNOVIN-PT-REAGENT", "name": "DADE INNOVIN (PT REAGENT)", "dept": "COAG", "ref": "B4212-41", "vendor": "SIEMENS", "unit": "BOXES", "pack": "10 BOTTLES/BOX"},
+  {"key": "COAG|DADE-ACTIN-FSL-PTT-REAGENT", "name": "DADE ACTIN FSL (PTT REAGENT)", "dept": "COAG", "ref": "B4219-1", "vendor": "SIEMENS", "unit": "BOXES", "pack": "10 BOTTLES/BOX"},
+  {"key": "COAG|DADE-CI-TROL-QC-1", "name": "DADE CI-TROL (QC 1)", "dept": "COAG", "ref": "B4244-10", "vendor": "SIEMENS", "unit": "BOXES", "pack": "20 BOTTLES/BOX"},
+  {"key": "COAG|DADE-CI-TROL-QC-3", "name": "DADE CI-TROL (QC 3)", "dept": "COAG", "ref": "B4244-30", "vendor": "SIEMENS", "unit": "BOXES", "pack": "20 BOTTLES/BOX"},
+  {"key": "COAG|COAG-CALIBRATOR-CA-CAL-S", "name": "COAG CALIBRATOR (CA CAL S)", "dept": "COAG", "ref": "014-1271-4", "vendor": "Siemens", "unit": "BOTTLES", "pack": "3 BOTTLES/BOX"},
+  {"key": "COAG|CALCIUM-CHLORIDE-CACL2", "name": "CALCIUM CHLORIDE (CACL2)", "dept": "COAG", "ref": "ORHO37", "vendor": "Siemens", "unit": "BOTTLES", "pack": "10 BOTTLES/BOX"},
+  {"key": "COAG|CLEAN-I", "name": "CLEAN I", "dept": "COAG", "ref": "964-0631-3", "vendor": "Siemens", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "COAG|CLEAN-II", "name": "CLEAN II", "dept": "COAG", "ref": "BT-565-104", "vendor": "Siemens", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX"},
+  {"key": "COAG|REACTION-TUBES", "name": "REACTION TUBES", "dept": "COAG", "ref": "904-0721-9", "vendor": "Siemens", "unit": "BAGS", "pack": "3 BAGS/BOX", "inner": "3000 RXN TUBES/BOX"},
+  {"key": "URINES|MAS-UA-CONTROL-1", "name": "MAS UA CONTROL 1", "dept": "URINES", "section": "CLINITEK ADVANTUS", "ref": "UAB-160", "vendor": "Fisher", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "URINES|MAS-UA-CONTROL-2", "name": "MAS UA CONTROL 2", "dept": "URINES", "section": "CLINITEK ADVANTUS", "ref": "UAB-215", "vendor": "Fisher", "unit": "BOTTLES", "pack": "6 BOTTLES/BOX"},
+  {"key": "URINES|MULTISTIX-10-SG", "name": "MULTISTIX 10 SG", "dept": "URINES", "section": "CLINITEK ADVANTUS", "ref": "2161", "vendor": "Siemens", "unit": "CONTAINERS", "pack": "1 BOTTLE/BOX"},
+  {"key": "URINES|URINE-POUR-OFF-TUBES", "name": "URINE POUR OFF TUBES", "dept": "URINES", "section": "CLINITEK ADVANTUS", "ref": "112015", "vendor": "Globe Scientific", "unit": "BOXES", "pack": "1000 TUBES/BOX"},
+  {"key": "URINES|PLAIN-GLASS-SLIDES", "name": "PLAIN GLASS SLIDES", "dept": "URINES", "section": "CLINITEK ADVANTUS", "ref": "12550A3", "vendor": "Fisherbrand", "unit": "SLIDE BOXES", "pack": "20 SLIDE BOXES/BOX"},
+  {"key": "URINES|COVER-SLIPS-22-X-22-MM-NO-1-5", "name": "COVER SLIPS (22 x 22 mm No. 1.5)", "dept": "URINES", "section": "CLINITEK ADVANTUS", "ref": "1404-15", "vendor": "Globe Scientific", "unit": "BOXES", "pack": "10 CONTAINERS/BOX"},
+  {"key": "URINES|UF-CELL-SHEATH", "name": "UF CELL SHEATH", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "ZA900007", "vendor": "Sysmex", "unit": "BOXES"},
+  {"key": "URINES|CR-UF-CELL-PACK", "name": "CR UF CELL PACK", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "ZA900009", "vendor": "Sysmex", "unit": "CONTAINERS", "pack": "2 CONTAINERS/BOX"},
+  {"key": "URINES|SF-UF-CELL-PACK", "name": "SF UF CELL PACK", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "ZA900008", "vendor": "Sysmex", "unit": "CONTAINERS", "pack": "2 CONTAINERS/BOX"},
+  {"key": "URINES|CR-FLOUROCELL", "name": "CR FLOUROCELL", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "AG792864", "vendor": "Sysmex", "unit": "REAGENT PACKS", "pack": "2 RP/BOX"},
+  {"key": "URINES|SF-FLOUROCELL", "name": "SF FLOUROCELL", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "CE919553", "vendor": "Sysmex", "unit": "REAGENT PACKS", "pack": "2 RP/BOX"},
+  {"key": "URINES|CLINITEK-NOVUS-POS-CTRL", "name": "CLINITEK NOVUS POS CTRL", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "5019", "vendor": "Siemens", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX", "inner": "25 STRIPS/BOTTLE"},
+  {"key": "URINES|CLINITEK-NOVUS-NEG-CTRL", "name": "CLINITEK NOVUS NEG CTRL", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "5037", "vendor": "Siemens", "unit": "BOTTLES", "pack": "1 BOTTLE/BOX", "inner": "25 STRIPS/BOTTLE"},
+  {"key": "URINES|CLINITEK-NOVUS-CASSETTES", "name": "CLINITEK NOVUS CASSETTES", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "10634643", "vendor": "Siemens", "unit": "CASSETTES", "pack": "450 TESTS/CASSETTE"},
+  {"key": "URINES|RINSE-ADDITIVE", "name": "RINSE ADDITIVE", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "10697754", "vendor": "Siemens", "unit": "BOTTLES", "pack": "4 BOTTLES/BOX"},
+  {"key": "URINES|UF-CONTROL", "name": "UF CONTROL", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "BE-740-265", "vendor": "Sysmex", "unit": "BOXES", "pack": "1 LOW & HIGH QC SET/BOX"},
+  {"key": "URINES|CLINITEK-NOVUS-CAL-1-4", "name": "CLINITEK NOVUS (CAL 1-4)", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "10697753", "vendor": "Siemens", "unit": "BOXES", "pack": "1 BOTTLE OF EACH CAL/BOX"},
+  {"key": "URINES|NOVUS-SG-SENSOR", "name": "NOVUS SG SENSOR", "dept": "URINES", "section": "SYSMEX UN-2000", "ref": "10698455", "vendor": "Siemens", "unit": "SG WELL", "pack": "1 SG WELL/BOX"},
+  {"key": "KIT TESTS|SERUM-URINE-HCG-KITS", "name": "SERUM/URINE HCG KITS", "dept": "KIT TESTS", "ref": "23900529", "vendor": "FISHER", "unit": "BOXES", "pack": "50 TESTS/BOX"},
+  {"key": "KIT TESTS|HCG-SERUM-CONTROLS", "name": "HCG SERUM CONTROLS", "dept": "KIT TESTS", "ref": "087712-F", "vendor": "FISHER", "unit": "CONTAINER", "pack": "3 CONTROLS/CONTAINER"},
+  {"key": "KIT TESTS|RPR-KITS", "name": "RPR KITS", "dept": "KIT TESTS", "ref": "500 TEST", "vendor": "FISHER", "unit": "KITS"},
+  {"key": "KIT TESTS|RPR-TITER-CONTROL", "name": "RPR TITER CONTROL", "dept": "KIT TESTS", "ref": "23-029966", "vendor": "FISHER", "unit": "KITS", "pack": "1 QC BOTTLE/BOX"},
+  {"key": "KIT TESTS|POST-VASECTOMY-QC", "name": "POST VASECTOMY QC", "dept": "KIT TESTS", "ref": "FSI211", "vendor": "FERTILITY SOLUTIONS", "unit": "BOXES", "pack": "1 QC SET/BOX"},
+  {"key": "KIT TESTS|SICKLESCREEN-30-DETERMINATIONS", "name": "SICKLESCREEN (30 DETERMINATIONS)", "dept": "KIT TESTS", "ref": "100250", "vendor": "FISHER", "unit": "KITS", "pack": "30 TESTS/BOX"},
+  {"key": "KIT TESTS|SICKLING-HEMOGLOBIN-QC", "name": "SICKLING HEMOGLOBIN QC", "dept": "KIT TESTS", "ref": "100251", "vendor": "FISHER", "unit": "SETS", "pack": "4 QC SETS/BOX"},
+  {"key": "MICRO|BLOOD-AGAR", "name": "BLOOD AGAR", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "R01202", "vendor": "Remel", "unit": "BOXES", "pack": "100 PLATES/BOX"},
+  {"key": "MICRO|BI-PLATES", "name": "BI-PLATES", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "R02049", "vendor": "Remel", "unit": "BOXES", "pack": "100 PLATES/BOX"},
+  {"key": "MICRO|CHOCOLATE-AGAR", "name": "CHOCOLATE AGAR", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "R01302", "vendor": "Remel", "unit": "BOXES", "pack": "100 PLATES/BOX"},
+  {"key": "MICRO|ANAEROBIC-AGAR", "name": "ANAEROBIC AGAR", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "R01036", "vendor": "Remel", "unit": "BOXES", "pack": "100 PLATES/BOX"},
+  {"key": "MICRO|MRSA", "name": "MRSA", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "215228", "vendor": "BD", "unit": "STACKS", "pack": "2 STACKS/BOX", "inner": "10 PLATES/STACK"},
+  {"key": "MICRO|GASPAK-EZ-ANAEROBIC-POUCH", "name": "GASPAK EZ ANAEROBIC POUCH", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "260683", "vendor": "BD", "unit": "BOXES", "pack": "20 POUCHES/BOX"},
+  {"key": "MICRO|GASPAK-EZ-CO2-POUCH", "name": "GASPAK EZ CO2 POUCH", "dept": "MICRO", "section": "CULTURE MEDIA & SUPPLIES", "ref": "260684", "vendor": "BD", "unit": "BOXES", "pack": "20 POUCHES/BOX"},
+  {"key": "MICRO|EP-T-I-P-S-RELOADS-0-1-20-UL", "name": "EP T.I.P.S. RELOADS 0.1-20 uL", "dept": "MICRO", "section": "MALDI", "ref": "22491512", "vendor": "EPPENDORF", "unit": "BOXES", "pack": "10 TRAYS/BOX", "inner": "96 TIPS/TRAY"},
+  {"key": "MICRO|EP-T-I-P-S-RELOADS-2-200-UL", "name": "EP T.I.P.S. RELOADS 2-200 uL", "dept": "MICRO", "section": "MALDI", "ref": "22491539", "vendor": "EPPENDORF", "unit": "BOXES", "pack": "10 TRAYS/BOX", "inner": "96 TIPS/TRAY"},
+  {"key": "MICRO|EP-T-I-P-S-RELOADS-50-1000-UL", "name": "EP T.I.P.S. RELOADS 50-1000 uL", "dept": "MICRO", "section": "MALDI", "ref": "22491555", "vendor": "EPPENDORF", "unit": "BOXES", "pack": "10 TRAYS/BOX", "inner": "96 TIPS/TRAY"},
+  {"key": "MICRO|STERILE-TRANSFER-DEVICES-TOOTHPICK", "name": "STERILE TRANSFER DEVICES (TOOTHPICK)", "dept": "MICRO", "section": "MALDI", "ref": "25-28107", "vendor": "PURITAN", "unit": "BOXES", "pack": "1040 DEVICES/BOX"},
+  {"key": "MICRO|SCREW-CAP-MICRO-TUBE-0-5-ML", "name": "SCREW CAP MICRO TUBE 0.5 ML", "dept": "MICRO", "section": "MALDI", "ref": "72.730.305", "vendor": "SARSTEDT", "unit": "BAGS", "pack": "1000 TUBES/BOX", "inner": "100 TUBES/BAG"},
+  {"key": "MICRO|SAFE-LOCK-TUBES-1-5-ML", "name": "SAFE-LOCK TUBES 1.5 ML", "dept": "MICRO", "section": "MALDI", "ref": "30123611", "vendor": "EPPENDORF", "unit": "BAGS", "pack": "50 TUBES/BAG"},
+  {"key": "MICRO|US-IVD-BTS", "name": "US IVD BTS", "dept": "MICRO", "section": "MALDI", "ref": "8604530", "vendor": "BRUKER", "unit": "BOXES", "pack": "5 YELLOW TOP TUBES/BOX"},
+  {"key": "MICRO|US-IVD-HCCA-MATRIX", "name": "US IVD HCCA (MATRIX)", "dept": "MICRO", "section": "MALDI", "ref": "8604531", "vendor": "BRUKER", "unit": "TUBES", "pack": "10 TUBES/BOX"},
+  {"key": "MICRO|FORMIC-ACID", "name": "FORMIC ACID", "dept": "MICRO", "section": "MALDI", "ref": "A117-50", "vendor": "Fisherbrand", "unit": "BOTTLE", "pack": "50 ML/BOTTLE"},
+  {"key": "MICRO|STANDARD-SOLVENT", "name": "STANDARD SOLVENT", "dept": "MICRO", "section": "MALDI", "ref": "1003831359", "vendor": "BRUKER", "unit": "BOTTLE", "pack": "100 ML/BOTTLE"},
+  {"key": "MICRO|ABSOLUTE-ETHANOL-200-PROOF", "name": "ABSOLUTE ETHANOL (200 PROOF)", "dept": "MICRO", "section": "MALDI", "ref": "BP2818-500", "vendor": "Fisherbrand", "unit": "BOTTLE", "pack": "500 ML/BOTTLE"},
+  {"key": "MICRO|MBT-BIOTARGET-96", "name": "MBT BIOTARGET 96", "dept": "MICRO", "section": "MALDI", "ref": "1840380", "vendor": "BRUKER", "unit": "BOXES", "pack": "20 PLATES/BOX"},
+  {"key": "MICRO|NM56-NEGATIVE-PANEL", "name": "NM56 (Negative Panel)", "dept": "MICRO", "section": "MICROSCAN", "ref": "C42464", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "20 PANELS/BOX"},
+  {"key": "MICRO|PM34-POSITIVE-PANEL", "name": "PM34 (Positive Panel)", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1017-216", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "20 PANELS/BOX"},
+  {"key": "MICRO|MSTRP-2-STREP-PANEL", "name": "MSTRP+2 (Strep Panel)", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1027-202", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "20 PANELS/BOX"},
+  {"key": "MICRO|RENOK-D-INNOCULATOR-SETS", "name": "RENOK D-INNOCULATOR SETS", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1013-4", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "240 TRAYS/BOX"},
+  {"key": "MICRO|PROMPTS", "name": "PROMPTS", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1026-10D", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "60 PROMPTS/BOX"},
+  {"key": "MICRO|96-WELL-TRAY-LIDS", "name": "96 WELL TRAY LIDS", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1018-18", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "240 LIDS/BOX"},
+  {"key": "MICRO|3-ML-INNOCULUM-SALINE", "name": "3 ML INNOCULUM SALINE", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1015-12", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "60 BOTTLES/BOX"},
+  {"key": "MICRO|MH-BROTH-W-3-LHB", "name": "MH BROTH W/ 3% LHB", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1015-25", "vendor": "Beckman Coulter", "unit": "BOXES", "pack": "10 TUBES/BOX"},
+  {"key": "MICRO|MICROSCAN-BARCODE-LABEL-4-X-0-43", "name": "MICROSCAN BARCODE LABEL (4\" X 0.43\")", "dept": "MICRO", "section": "MICROSCAN", "ref": "B1018-129", "vendor": "Beckman Coulter", "unit": "ROLLS"},
+  {"key": "MICRO|QC-BUGS", "name": "QC BUGS", "dept": "MICRO", "section": "GENERAL MICRO"},
+  {"key": "MICRO|GRAM-STAIN-SET", "name": "GRAM STAIN SET", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "212539", "vendor": "BD", "unit": "SETS", "pack": "1 SET/BOX", "inner": "4 BOTTLES/SET"},
+  {"key": "MICRO|DISPOSABLE-LOOPS-1UL-BLUE", "name": "DISPOSABLE LOOPS (1uL) (BLUE)", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "22363604", "vendor": "Fisherbrand", "unit": "BOXES", "pack": "10 BOXES/CASE", "inner": "960 LOOPS/BOX"},
+  {"key": "MICRO|SENSI-DISC-BACITRACIN", "name": "SENSI-DISC BACITRACIN", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "231268", "vendor": "BD", "unit": "BOXES", "pack": "10 ROLLS/BOX", "inner": "50 DISCS/ROLL"},
+  {"key": "MICRO|NITROCEFIN-DISK", "name": "NITROCEFIN DISK", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "R211667", "vendor": "Remel", "unit": "BOXES", "pack": "1 BOTTLE/BOX", "inner": "25 DISCS/BOTTLE"},
+  {"key": "MICRO|BACTIDROP-OXIDASE", "name": "BACTIDROP OXIDASE", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "R21540", "vendor": "Remel", "unit": "BOXES", "pack": "50 TUBES/BOX"},
+  {"key": "MICRO|DEALMED-HYDROGEN-PEROXIDE-3", "name": "DEALMED HYDROGEN PEROXIDE 3%", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "781090", "vendor": "Amazon", "unit": "BOTTLES", "pack": "1 BOTTLE"},
+  {"key": "MICRO|POTASSIUM-HYDROXIDE-KOH", "name": "POTASSIUM HYDROXIDE (KOH)", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "B1015-43", "unit": "BOTTLES"},
+  {"key": "MICRO|SHARPIE-PEEL-OFF-CHINA-MARKER-RED", "name": "SHARPIE PEEL-OFF CHINA MARKER (RED)", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "2229138", "vendor": "Amazon", "unit": "PENCILS", "pack": "12 PENCILS/BOX"},
+  {"key": "MICRO|BIBULOUS-PAPER", "name": "BIBULOUS PAPER", "dept": "MICRO", "section": "GENERAL MICRO", "ref": "11-998", "vendor": "Fisherbrand", "unit": "PACKS", "pack": "600 SHEETS/PACK"},
+  {"key": "SUPPLIES|TRANSFER-PIPETTES", "name": "TRANSFER PIPETTES", "dept": "SUPPLIES", "ref": "558", "unit": "BOXES"},
+  {"key": "SUPPLIES|1000-UL-PIPETTE-TIPS-FILTERED", "name": "1000 UL PIPETTE TIPS FILTERED", "dept": "SUPPLIES", "ref": "02-707-404", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "SUPPLIES|1000-UL-PIPETTE-TIPS-NON-FILTERED", "name": "1000 UL PIPETTE TIPS NON-FILTERED", "dept": "SUPPLIES", "ref": "02-707-407", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "SUPPLIES|200-UL-PIPETTE-TIPS", "name": "200 UL PIPETTE TIPS", "dept": "SUPPLIES", "ref": "02-707-409", "unit": "BOXES"},
+  {"key": "SUPPLIES|WOODEN-STICKS", "name": "WOODEN STICKS", "dept": "SUPPLIES", "ref": "22363158", "unit": "BOXES"},
+  {"key": "SUPPLIES|COTTON-SWABS", "name": "COTTON SWABS", "dept": "SUPPLIES", "ref": "25-806 2WC", "unit": "BOXES"},
+  {"key": "SUPPLIES|RED-CAPS", "name": "RED CAPS", "dept": "SUPPLIES", "ref": "113148R", "unit": "BAGS"},
+  {"key": "SUPPLIES|BLUE-CAPS", "name": "BLUE CAPS", "dept": "SUPPLIES", "ref": "118240B", "unit": "BAGS"},
+  {"key": "SUPPLIES|POUR-OFF-TUBES", "name": "POUR OFF TUBES", "dept": "SUPPLIES", "ref": "110471", "unit": "BAGS"},
+  {"key": "SUPPLIES|PARAFILM", "name": "PARAFILM", "dept": "SUPPLIES", "ref": "PM-992", "unit": "ROLLS"},
+  {"key": "SUPPLIES|LENS-CLEANER", "name": "LENS CLEANER", "dept": "SUPPLIES", "ref": "54828", "unit": "BOTTLES"},
+  {"key": "SUPPLIES|LENS-PAPER", "name": "LENS PAPER", "dept": "SUPPLIES", "ref": "11-996", "unit": "BOOKS"},
+  {"key": "SUPPLIES|IMMERSION-OIL", "name": "IMMERSION OIL", "dept": "SUPPLIES", "ref": "M5004", "unit": "BOTTLES"},
+  {"key": "SUPPLIES|PRINTER-PAPER-COAG-CLINITEK", "name": "PRINTER PAPER (COAG & CLINITEK)", "dept": "SUPPLIES", "ref": "22-044296", "unit": "ROLLS"},
+  {"key": "SUPPLIES|7-55-CLOROX-BLEACH", "name": "7.55% CLOROX BLEACH", "dept": "SUPPLIES", "unit": "BOTTLES"},
+  {"key": "SUPPLIES|80-ETHANOL", "name": "80% ETHANOL", "dept": "SUPPLIES", "ref": "T08204.K7", "unit": "BOTTLES"},
+  {"key": "SUPPLIES|LARGE-KIM-WIPS", "name": "LARGE KIM WIPS", "dept": "SUPPLIES", "ref": "34256", "unit": "BOXES"},
+  {"key": "SUPPLIES|SMALL-KIM-WIPES", "name": "SMALL KIM WIPES", "dept": "SUPPLIES", "ref": "34155", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|ACETONE-4L", "name": "ACETONE (4L)", "dept": "TOXICOLOGY", "ref": "A18P-4", "vendor": "FISHER", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|ACETONITRILE-4L", "name": "ACETONITRILE (4L)", "dept": "TOXICOLOGY", "ref": "A955-4", "vendor": "FISHER", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|ISOPROPYL-ALCOHOL-4L", "name": "ISOPROPYL ALCOHOL (4L)", "dept": "TOXICOLOGY", "ref": "A464-4", "vendor": "FISHER", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|METHANOL-4L", "name": "METHANOL (4L)", "dept": "TOXICOLOGY", "ref": "A456-4", "vendor": "FISHER", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|FORMIC-ACID-50-ML", "name": "FORMIC ACID (50 mL)", "dept": "TOXICOLOGY", "ref": "A117-50", "vendor": "FISHER", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|LCMS-WATER-4L", "name": "LCMS WATER (4L)", "dept": "TOXICOLOGY", "ref": "W6-4", "vendor": "FISHER", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|AMMONIUM-FORMATE-250G", "name": "AMMONIUM FORMATE (250g)", "dept": "TOXICOLOGY", "ref": "A10699.30", "vendor": "THERMO SCIENTIFIC", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|2-MERCAPTOETHANOL", "name": "2-MERCAPTOETHANOL", "dept": "TOXICOLOGY", "ref": "125472500", "vendor": "ACROS ORGANICS", "unit": "BOTTLES"},
+  {"key": "TOXICOLOGY|COLUMNS-FORCE-BIPHENYL-3-UM-50X-2-1-MM", "name": "COLUMNS (FORCE BIPHENYL 3 uM 50x 2.1 mm)", "dept": "TOXICOLOGY", "vendor": "RESTEK"},
+  {"key": "TOXICOLOGY|COLUMNS-FORCE-BIPHENYL-3-UM-100-X-3-0-MM", "name": "COLUMNS (FORCE BIPHENYL 3 uM 100 x 3.0 mm)", "dept": "TOXICOLOGY", "vendor": "RESTEK"},
+  {"key": "TOXICOLOGY|DEEP-WELL-PLATES", "name": "DEEP WELL PLATES", "dept": "TOXICOLOGY", "ref": "95040452", "vendor": "THERMOSCIENTIFIC", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|TECAN-TIPS-200-UL", "name": "TECAN TIPS 200 uL", "dept": "TOXICOLOGY", "ref": "30064849", "vendor": "TECAN", "unit": "RACKS"},
+  {"key": "TOXICOLOGY|TECAN-TIPS-1000-UL", "name": "TECAN TIPS 1000 uL", "dept": "TOXICOLOGY", "ref": "3000631", "vendor": "TECAN", "unit": "RACKS"},
+  {"key": "TOXICOLOGY|TECAN-TROUGHS-SMALL", "name": "TECAN TROUGHS (SMALL)", "dept": "TOXICOLOGY", "ref": "30055743", "vendor": "TECAN", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|TECAN-TROUGHS-LARGE", "name": "TECAN TROUGHS (LARGE)", "dept": "TOXICOLOGY", "ref": "10613049", "vendor": "TECAN", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|20-UL-PIPETTE-TIPS", "name": "20 ul PIPETTE TIPS", "dept": "TOXICOLOGY", "ref": "02-707-432", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|200-UL-PIPETTE-TIPS", "name": "200 ul PIPETTE TIPS", "dept": "TOXICOLOGY", "ref": "02-707-430", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|300-UL-PIPETTE-TIPS", "name": "300 uL PIPETTE TIPS", "dept": "TOXICOLOGY", "ref": "02-707-409", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|1000-UL-PIPETTE-TIPS", "name": "1000 uL PIPETTE TIPS", "dept": "TOXICOLOGY", "ref": "02-707-407", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|10-UL-REPEATOR-TIPS", "name": "10 ul REPEATOR TIPS", "dept": "TOXICOLOGY", "vendor": "EPPENDORF"},
+  {"key": "TOXICOLOGY|100-UL-REPEATOR-TIPS", "name": "100 ul REPEATOR TIPS", "dept": "TOXICOLOGY", "vendor": "EPPENDORF"},
+  {"key": "TOXICOLOGY|200-UL-REPEATOR-TIPS", "name": "200 uL REPEATOR TIPS", "dept": "TOXICOLOGY", "vendor": "EPPENDORF"},
+  {"key": "TOXICOLOGY|10-ML-PIPETTE-TIPS", "name": "10 ml PIPETTE TIPS", "dept": "TOXICOLOGY", "vendor": "SCIENTIFIC LAB", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|5-ML-TUBES", "name": "5 mL TUBES", "dept": "TOXICOLOGY", "ref": "30119401", "vendor": "EPPENDORF", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|25-ML-TUBES", "name": "25 mL TUBES", "dept": "TOXICOLOGY", "ref": "30118421", "vendor": "EPPENDORF", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|50-ML-TUBES", "name": "50 mL TUBES", "dept": "TOXICOLOGY", "ref": "05-539-13", "vendor": "FISHER", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|MICROCENTRIFUGE-TUBES", "name": "MICROCENTRIFUGE TUBES", "dept": "TOXICOLOGY", "ref": "22363352", "vendor": "ULAB SCIENTIFIC", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|GLASS-TUBES", "name": "GLASS TUBES", "dept": "TOXICOLOGY", "ref": "14-961-26", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|INTERNAL-STANDARDS", "name": "INTERNAL STANDARDS", "dept": "TOXICOLOGY", "unit": "VIALS"},
+  {"key": "TOXICOLOGY|CAL-S-AND-QC-S", "name": "CAL'S AND QC'S", "dept": "TOXICOLOGY", "unit": "SETS"},
+  {"key": "TOXICOLOGY|PH-STRIPS-3-7", "name": "PH STRIPS (3-7)", "dept": "TOXICOLOGY", "ref": "LRS-4801", "vendor": "FISHER", "unit": "CASES"},
+  {"key": "TOXICOLOGY|PLATE-FOIL-SEALS", "name": "PLATE FOIL SEALS", "dept": "TOXICOLOGY", "ref": "AB-0757", "vendor": "THERMO SCIENTIFIC", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|BLUE-CAPS", "name": "BLUE CAPS", "dept": "TOXICOLOGY", "unit": "BULK INVENTORY"},
+  {"key": "TOXICOLOGY|BLACK-CAPS", "name": "BLACK CAPS", "dept": "TOXICOLOGY", "unit": "BULK INVENTORY"},
+  {"key": "TOXICOLOGY|CLEAR-CAPS", "name": "CLEAR CAPS", "dept": "TOXICOLOGY", "unit": "BULK INVENTORY"},
+  {"key": "TOXICOLOGY|SHARPIES", "name": "SHARPIES", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "BULK INVENTORY"},
+  {"key": "TOXICOLOGY|BIOHAZARD-BAGS-SMALL", "name": "BIOHAZARD BAGS (SMALL)", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "BULK INVENTORY"},
+  {"key": "TOXICOLOGY|PARAFILM", "name": "PARAFILM", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "ref": "PM-992", "vendor": "AMCOR", "unit": "ROLLS"},
+  {"key": "TOXICOLOGY|KIMWIPES", "name": "KIMWIPES", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "ref": "34155", "vendor": "KIMTECH", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|WEIGH-BOATS", "name": "WEIGH BOATS", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "BAGS"},
+  {"key": "TOXICOLOGY|SMALL-GLOVES", "name": "SMALL GLOVES", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "ref": "52817", "vendor": "HAYLARD", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|LARGE-GLOVES", "name": "LARGE GLOVES", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "ref": "52819", "vendor": "HAYLARD", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|BLUE-SAMPLE-RACKS", "name": "BLUE SAMPLE RACKS", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "RACKS"},
+  {"key": "TOXICOLOGY|MICROCENTRIFUGE-RACKS-ROUND", "name": "MICROCENTRIFUGE RACKS (ROUND)", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "RACKS"},
+  {"key": "TOXICOLOGY|MULTIPURPOSE-RACKS", "name": "MULTIPURPOSE RACKS", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "RACKS"},
+  {"key": "TOXICOLOGY|MICROCENTRIFUGE-RACKS-SQUARE", "name": "MICROCENTRIFUGE RACKS (SQUARE)", "dept": "TOXICOLOGY", "section": "COLOR TAPE", "unit": "RACKS"},
+  {"key": "TOXICOLOGY|500-ML-GLASS-BOTTLES", "name": "500 ml GLASS BOTTLES", "dept": "TOXICOLOGY", "section": "BEAKERS", "vendor": "FISHER"},
+  {"key": "TOXICOLOGY|1000-ML-GLASS-BOTTLES", "name": "1000 ml GLASS BOTTLES", "dept": "TOXICOLOGY", "section": "BEAKERS", "vendor": "FISHER"},
+  {"key": "TOXICOLOGY|2000-ML-GLASS-BOTTLES", "name": "2000 ml GLASS BOTTLES", "dept": "TOXICOLOGY", "section": "BEAKERS", "vendor": "FISHER"},
+  {"key": "TOXICOLOGY|500-ML-GRADUATED-CYLINDER", "name": "500 ml GRADUATED CYLINDER", "dept": "TOXICOLOGY", "section": "BEAKERS", "ref": "70024", "vendor": "PYREX VISTA"},
+  {"key": "TOXICOLOGY|1000-ML-GRADUATED-CYLINDER", "name": "1000 ml GRADUATED CYLINDER", "dept": "TOXICOLOGY", "section": "BEAKERS", "ref": "ASTM E1272", "vendor": "E LAB GLASS"},
+  {"key": "TOXICOLOGY|SEROLOGICAL-PIPETS", "name": "SEROLOGICAL PIPETS", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "13-678-31J", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|DUALFILTER-TIPS-10UL", "name": "DUALFILTER TIPS (10ul)", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "2202831", "vendor": "EPPENDORF", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|OPTICAP-XL-FILTER-4", "name": "OPTICAP XL FILTER 4\"", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "OPTIA04NN1", "vendor": "MILLI-Q", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|DRY-TYPE-AUTOTRANSFORMER", "name": "DRY TYPE AUTOTRANSFORMER", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "06 3200", "vendor": "MILLI-Q", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|MAINTENACE-KIT", "name": "MAINTENACE KIT", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "ZFMANKTXL", "vendor": "MILLI-Q", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|UV-LAMP-SQUARE-PART", "name": "UV LAMP SQUARE PART", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "ZLXUVL2LI", "vendor": "MILLI-Q", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|VENT-FILTER", "name": "VENT FILTER", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "TANKMPKXC", "vendor": "MILLI-Q", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|REAGENT-RESERVIORS", "name": "REAGENT RESERVIORS", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "20250829", "vendor": "LICHEN COTTAGE", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|ASI-TIPS-200UL", "name": "ASI TIPS (200ul)", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "250804-1261", "vendor": "ALKALI SCIENTIFIC", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|TECAN-TIPS-50-UL", "name": "TECAN TIPS (50 uL)", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "M212587L", "vendor": "TECAN", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|50ML-TUBES", "name": "50ml TUBES", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "858-5002FL", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|500ML-GLASS-BOTTLES", "name": "500ml GLASS BOTTLES", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "ref": "120-3518", "vendor": "FISHER", "unit": "BOXES"},
+  {"key": "TOXICOLOGY|TECAN-RUNNERS", "name": "TECAN RUNNERS", "dept": "TOXICOLOGY", "section": "WAREHOUSE INVENTORY", "vendor": "TECAN", "unit": "RUNNERS"}
+];
+if (typeof module !== "undefined") module.exports = { LABITEMS: LABITEMS };
+
 var GTIN_MAP = {"made":"2026-10-24T12:35:01.905Z","source":"FDA GUDID: openFDA udi search by catalog number, AccessGUDID device lookup by DI; cache data/gudid_cache.json","refs":{"lab":{"asked":0,"found":0,"noNumber":36,"notLookedUp":372},"items":{"asked":0,"found":0,"noNumber":47,"notLookedUp":85}},"hibc":0,"codes":{}};
 /* Orion Warehouse — core logic (no DOM). Shared by the app and the tests. */
 var CORE = (function () {
@@ -2302,6 +2760,7 @@ var CORE = (function () {
       // a delivery checked against its slip (6 Oct): the slip's number, how it was read, pages, lines that didn't come, picks learned
       po: rec.po || undefined, src: rec.src || undefined, pages: rec.pages || undefined, miss: rec.miss && rec.miss.length ? rec.miss : undefined, learn: rec.learn && rec.learn.length ? rec.learn : undefined,
       ordered: rec.ordered || undefined, oq: rec.oq || undefined, codes: rec.codes || undefined,
+      labCodes: rec.labCodes || undefined, labItems: rec.labItems || undefined,   // a lab item's product codes and what the lab's stock sheet says about it (19 Nov)
       lines: rec.lines.map(function (l) { return l.at ? [l.id, round(l.each, 3), l.at] : [l.id, round(l.each, 3)]; }) }, { dev: x.dev, by: rec.by, ver: x.ver }));
   }
   // lab form AppData; x = { req, dev, ver } from the device
@@ -2362,6 +2821,8 @@ var CORE = (function () {
       ordered: d.ordered && typeof d.ordered === "object" ? d.ordered : null,
       oq: d.oq && typeof d.oq === "object" && !Array.isArray(d.oq) ? d.oq : null,
       codes: d.codes && typeof d.codes === "object" && !Array.isArray(d.codes) ? d.codes : null,
+      labCodes: d.labCodes && typeof d.labCodes === "object" && !Array.isArray(d.labCodes) ? d.labCodes : null,   // Settings > Lab items (19 Nov)
+      labItems: d.labItems && typeof d.labItems === "object" && !Array.isArray(d.labItems) ? d.labItems : null,
       drop: d.drop && typeof d.drop === "object" && !Array.isArray(d.drop) ? d.drop : null,   // orders taken off the packing list elsewhere (15 Nov)
       lines: (d.lines || []).map(function (r) { var o = { id: r[0], each: num(r[1]) }; if (r[2]) o.at = String(r[2]); if (ID_ALIAS[o.id]) { o.aka = o.id; o.id = ID_ALIAS[o.id]; } return o; })
     };
@@ -3438,14 +3899,15 @@ var CORE = (function () {
     if (at) c.at = at; if (by) c.by = by;
     return c;
   }
-  // {item id: [{r, f, lv, nt, g, lot, exp, d: [[name, value]], at, by}]}, each item's codes in the order they were first scanned
-  function itemCodes(logs) {
-    var out = {};
+  // {item id: [{r, f, lv, nt, g, lot, exp, d: [[name, value]], at, by}]}, each item's codes in the order they were first scanned;
+  // lab: the lab items' codes instead (Settings > Lab items, 19 Nov: labCodes, by the lab item's key), never a warehouse item's
+  function itemCodes(logs, lab) {
+    var out = {}, field = lab ? "labCodes" : "codes";
     dedupe(logs || []).slice().sort(function (a, b) { return a.at < b.at ? -1 : a.at > b.at ? 1 : 0; }).forEach(function (g) {
-      if (g.type !== "Adjustment" || !g.codes) return;
-      Object.keys(g.codes).forEach(function (id) {
-        var key = ID_ALIAS[id] || id, list = out[key] = out[key] || [];
-        [].concat(g.codes[id] || []).forEach(function (c) {
+      if (g.type !== "Adjustment" || !g[field]) return;
+      Object.keys(g[field]).forEach(function (id) {
+        var key = lab ? id : ID_ALIAS[id] || id, list = out[key] = out[key] || [];
+        [].concat(g[field][id] || []).forEach(function (c) {
           if (!c || typeof c.r !== "string" || !c.r) return;
           var i = -1; list.forEach(function (o, k) { if (o.r === c.r) i = k; });
           if (c.x) { if (i >= 0) list.splice(i, 1); return; }
@@ -5468,13 +5930,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "eb6aed6da3";
+var BUILD = "f3539777d3";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.17 · 17 Nov 2026";
+var VERSION = "1.4.18 · 19 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -7761,6 +8223,11 @@ function expRow(id) {
    refused for its form. */
 var CODES = null, CAPTURE = null;   // CODES: the sheet's working list; CAPTURE: the camera is reading codes for this item (app5.js)
 function codesAll() { return C.itemCodes(values(S.logs)); }
+// Settings > Lab items (John, 19 Nov): the lab items on the lab's stock sheet (LABITEMS, by key) and their codes, the same sheet as a
+// warehouse item's, saved in the stock log as labCodes with what the sheet says about the item (labItems); nothing for the warehouse
+function labCodesAll() { return C.itemCodes(values(S.logs), true); }
+var LABBY = null;
+function labItemOf(key) { if (!LABBY) { LABBY = {}; (typeof LABITEMS !== "undefined" ? LABITEMS : []).forEach(function (it) { LABBY[it.key] = it; }); } return LABBY[key] || null; }
 function codeRow(id) {
   var d = codesAll()[id] || [];
   return '<div class="exprow coderow"><span class="lab">Product codes</span>' +
@@ -7771,25 +8238,27 @@ function codeRow(id) {
 function codeShow(r) { return String(r || "").replace(/\x1d/g, "␝").replace(/[\x00-\x1f]/g, " "); }
 function codeSub(c) { return [C.codeFormat(c.f), C.codeFieldsText(c)].filter(Boolean).join(" · "); }   // "Data Matrix · GTIN … · Expiry … · Lot …"
 function codeSheet() {
-  var x = CODES, it = itemOf(x.id), focus = x.focus; x.focus = null;
+  var x = CODES, it = x.lab ? labItemOf(x.id) : itemOf(x.id), focus = x.focus; x.focus = null;
   var rows = x.work.map(function (c, k) {
     return '<div class="sug code"><div class="what" style="flex-basis:100%"><input type="text" class="codeR" aria-label="Code" placeholder="Code" value="' + esc(codeShow(c.r)) + '" data-in="codeR" data-k="' + k + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"' + (focus === k ? " autofocus" : "") + '>' +
       '<small id="codeF' + k + '" style="overflow-wrap:anywhere">' + esc(codeSub(c)) + "</small></div>" +
       '<input type="text" class="codeN" aria-label="Note" placeholder="Note" value="' + esc(c.nt || "") + '" data-in="codeN" data-k="' + k + '" autocomplete="off" style="flex:1;min-width:160px">' +
       uiSeg(C.CODE_LEVELS, c.lv || "", "codeLv", { attrs: ' data-k="' + k + '"', label: "Code is on" }) + '<button class="btn sm" data-act="codeDel" data-k="' + k + '">Remove</button></div>';
   }).join("");
-  openSheet("Product codes: " + it.n,
+  openSheet("Product codes: " + (x.lab ? it.name : it.n),
+    (x.lab ? '<p class="muted" style="margin:0">' + esc([it.dept, it.ref ? "REF # " + it.ref : "", it.vendor, it.pack].filter(Boolean).join(" · ")) + "</p>" : "") +   // a lab item: its department, REF #, company and pack
     '<div class="sugs" style="margin:0">' + (rows || '<p class="dim" style="margin:0">No codes.</p>') + "</div>" +
     '<div class="row"><button class="btn" data-act="codeScan">' + IC.scan + 'Scan</button><button class="btn" data-act="codeType">Type one in</button></div>',
     '<button class="btn" data-act="closeSheet">Cancel</button><button class="btn primary" data-act="codeSave">Save</button>', true);
   sheetTyped = !!C.codesDiff(x.was, x.work);   // codes not saved yet: a tap beside the sheet doesn't drop them
 }
-ACT.codeEdit = function (el) {
-  var id = el.getAttribute("data-id"); if (!itemOf(id)) return;
-  var was = codesAll()[id] || [];
-  CODES = { id: id, was: was, work: was.map(function (c) { return { r: c.r, f: c.f, lv: c.lv, nt: c.nt || "" }; }) };
+function codesOpen(id, lab) {
+  var was = (lab ? labCodesAll() : codesAll())[id] || [];
+  CODES = { id: id, lab: lab, was: was, work: was.map(function (c) { return { r: c.r, f: c.f, lv: c.lv, nt: c.nt || "" }; }) };
   codeSheet();
-};
+}
+ACT.codeEdit = function (el) { var id = el.getAttribute("data-id"); if (itemOf(id)) codesOpen(id, false); };
+ACT.labCodeEdit = function (el) { var key = el.getAttribute("data-key"); if (labItemOf(key)) codesOpen(key, true); };
 // the code's text and its note are typed straight into the list; what the app reads out of the text follows as it is typed
 IN.codeR = function (el) {
   var k = +el.getAttribute("data-k"), c = CODES && CODES.work[k]; if (!c) return;
@@ -7810,8 +8279,13 @@ ACT.codeSave = function () {
   var x = CODES; closeSheet(); CODES = null; if (!x) return;
   var diff = C.codesDiff(x.was, x.work), n = C.codesClean(x.work).length;
   if (!diff) { toast("No change"); return; }
-  var it = itemOf(x.id), codes = {}; codes[x.id] = diff;
-  saveLog(newLog("Adjustment", { notes: "Product codes: " + it.n + " — " + (n ? n + (n === 1 ? " code" : " codes") : "none"), lines: [], codes: codes }));
+  var what = n ? n + (n === 1 ? " code" : " codes") : "none", codes = {}; codes[x.id] = diff;
+  if (x.lab) {
+    var li = labItemOf(x.id), info = {}, facts = {};
+    ["name", "dept", "section", "ref", "vendor", "unit", "pack", "inner"].forEach(function (k) { if (li[k]) facts[k] = li[k]; });
+    info[x.id] = facts;
+    saveLog(newLog("Adjustment", { notes: "Lab product codes: " + li.name + " — " + what, lines: [], labCodes: codes, labItems: info }));
+  } else saveLog(newLog("Adjustment", { notes: "Product codes: " + itemOf(x.id).n + " — " + what, lines: [], codes: codes }));
   toast(n ? "Product codes saved" : "Product codes taken off"); render.keepScroll = true; render();
 };
 ACT.xlCodes = function () { xlDownload("product_codes_" + today() + ".xlsx", "Codes", C.CODES_HEAD, C.codeRows(codesAll(), CAT.list)); };
@@ -9214,7 +9688,8 @@ function renderSettings() {
     '<div class="row"><button class="btn" data-act="stationHelp">Set up a print station</button><a class="btn ghost" href="#station" target="_blank" rel="noopener">Open the station screen</a></div></div></div>' +
 
     '<div class="card"><div class="ch"><h2>Items</h2><span class="muted" style="font-size:var(--fs-13)">' + CAT.list.length + " items" + (nOv || nAdd ? " · " + nOv + " edited, " + nAdd + " added" : "") + '</span><div class="grow"></div><button class="btn" data-act="itemAdd">+ Add item</button></div>' +
-    '<div class="cb" style="display:flex;flex-direction:column;gap:var(--sp-2-5)"><div id="itChips">' + itChips() + '</div><input type="search" id="itSearch" placeholder="Find an item" aria-label="Find an item" value="' + esc(IT.q) + '" data-in="itQ" autocomplete="off"></div><div id="itRes" class="tw">' + itemEditRows(IT.q) + "</div></div>";
+    '<div class="cb" style="display:flex;flex-direction:column;gap:var(--sp-2-5)"><div id="itChips">' + itChips() + '</div><input type="search" id="itSearch" placeholder="Find an item" aria-label="Find an item" value="' + esc(IT.q) + '" data-in="itQ" autocomplete="off"></div><div id="itRes" class="tw">' + itemEditRows(IT.q) + "</div></div>" +
+    labItemsCard();
 }
 // the Operations Center (12 Nov): this device's stock address, pasted from the Hub's Settings, kept on the device only and never shown again
 function hubRow() {
@@ -9262,6 +9737,47 @@ function itemEditRows(q) {
 IN.itQ = function (el) { IT.q = el.value; $("#itRes").innerHTML = itemEditRows(IT.q); };
 ACT.itShowAll = function () { IT.all = true; $("#itRes").innerHTML = itemEditRows(IT.q); };
 ACT.itSet = function (el) { IT.f = el.getAttribute("data-v") || ""; $("#itChips").innerHTML = itChips(); $("#itRes").innerHTML = itemEditRows(IT.q); };
+// Settings → Lab items (John, 19 Nov): the lab items on the lab's stock sheet, to scan or type their product codes on the warehouse
+// iPad (the same sheet as an item's, app3.js). A department at a time with a search through every department, as Lab Stock lists
+// them; the chips as on Items. Nothing here is a warehouse item or stock.
+var LI = { q: "", d: "", f: "" };
+function labList() { return typeof LABITEMS !== "undefined" ? LABITEMS : []; }
+function liChips() {
+  var codes = labCodesAll(), none = labList().filter(function (it) { return it.dept === LI.d && !(codes[it.key] || []).length; }).length;
+  return '<div class="fchips" role="group" aria-label="Show">' + [["nocode", "No product codes", none], ["", "All", null]].map(function (o) {
+    return '<button class="fchip" data-act="liSet" data-v="' + o[0] + '" aria-pressed="' + (LI.f === o[0]) + '">' + o[1] + (o[2] != null ? " (" + o[2] + ")" : "") + "</button>";
+  }).join("") + "</div>";
+}
+function labItemsCard() {
+  var all = labList(), depts = [], codes = labCodesAll(), n = all.filter(function (it) { return (codes[it.key] || []).length; }).length;
+  if (!all.length) return "";
+  all.forEach(function (it) { if (depts.indexOf(it.dept) < 0) depts.push(it.dept); });
+  if (depts.indexOf(LI.d) < 0) LI.d = depts[0];
+  return '<div class="card" id="labItems"><div class="ch"><h2>Lab items</h2><span class="muted" style="font-size:var(--fs-13)">' + all.length + " items" + (n ? " · " + n + " with product codes" : "") + "</span></div>" +
+    '<div class="cb" style="display:flex;flex-direction:column;gap:var(--sp-2-5)"><div id="liChips">' + liChips() + '</div><div class="row">' +
+    '<input type="search" id="liSearch" placeholder="Find a lab item" aria-label="Find a lab item" value="' + esc(LI.q) + '" data-in="liQ" autocomplete="off" style="width:auto;flex:1 1 220px">' +
+    '<select data-ch="liDept" aria-label="Department" style="width:auto;flex:0 1 220px">' + depts.map(function (d) { return "<option" + (d === LI.d ? " selected" : "") + ">" + esc(d) + "</option>"; }).join("") + "</select></div></div>" +
+    '<div id="liRes" class="tw">' + labItemRows() + "</div></div>";
+}
+function labItemRows() {
+  var q = (LI.q || "").toLowerCase().trim(), words = q.split(/\s+/).filter(Boolean), codes = labCodesAll();
+  var list = labList().filter(function (it) {
+    if (!words.length) return it.dept === LI.d && (LI.f !== "nocode" || !(codes[it.key] || []).length);
+    var hay = [it.name, it.ref, it.vendor, it.section, it.dept].join(" ").toLowerCase();
+    return words.every(function (w) { return hay.indexOf(w) >= 0; });
+  });
+  if (!list.length) return '<div class="empty" style="padding:var(--sp-6)">' + (words.length ? "No lab item matches “" + esc(q) + "”." : "Every item here has a product code.") + "</div>";
+  return '<table class="t"><thead><tr><th>Item</th><th>REF #</th><th>Company</th><th>Product codes</th></tr></thead><tbody>' +
+    list.map(function (it) {
+      var d = codes[it.key] || [];
+      return '<tr class="click" data-act="labCodeEdit" data-key="' + esc(it.key) + '"><td><button class="tcell" data-act="labCodeEdit" data-key="' + esc(it.key) + '">' + esc(it.name) + (words.length ? '<br><span class="muted">' + esc(it.dept) + "</span>" : "") + "</button></td>" +
+        "<td>" + esc(it.ref || "") + "</td><td>" + esc(it.vendor || "") + "</td><td>" +
+        (d.length ? '<span class="pill">' + esc(d[0].g || cut(C.codeText(d[0]), 22)) + "</span>" + (d.length > 1 ? ' <span class="pill">+' + (d.length - 1) + "</span>" : "") : '<span class="dim">none on file</span>') + "</td></tr>";
+    }).join("") + "</tbody></table>";
+}
+IN.liQ = function (el) { LI.q = el.value; $("#liRes").innerHTML = labItemRows(); };
+IN.liDept = function (el) { LI.d = el.value; LI.q = ""; var s = $("#liSearch"); if (s) s.value = ""; $("#liChips").innerHTML = liChips(); $("#liRes").innerHTML = labItemRows(); };   // as Lab Stock: a department clears the search
+ACT.liSet = function (el) { LI.f = el.getAttribute("data-v") || ""; $("#liChips").innerHTML = liChips(); $("#liRes").innerHTML = labItemRows(); };
 ACT.locUpload = function () {
   var inp = document.createElement("input");
   inp.type = "file"; inp.accept = ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";

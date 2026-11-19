@@ -3321,6 +3321,8 @@ var CORE = (function () {
   function labelDate(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? (+m[2]) + "/" + (+m[3]) + "/" + m[1].slice(2) : ""; }
   // meta = { order, date } from the slip: "Order #7738" at the left and "Packed 10/5/26" at the right, between the name and
   // the rule (John picked this layout on 5 Oct). No order and no date (the test label) = the label as before.
+  // John, 19 Nov: the box labels are as they were before the QR code (12 Nov to 19 Nov it sat at the left above the rule); the code
+  // is on a label of its own, one an order (orderQrZPL)
   function labelZPL(name, i, n, dpi, sizeKey, meta) {
     var sz = LABEL_SIZES[sizeKey] || LABEL_SIZES["2.25x1.25"];
     dpi = dpi || 203; meta = meta || {};
@@ -3332,33 +3334,17 @@ var CORE = (function () {
     var W = d(sz.w), L = d(sz.h), mx = d(m), bw = W - 2 * mx, th = Math.max(2, d(0.01)), gap = d(gapIn), mb = d(Math.max(0.04, m - 0.03));
     var lineY = L - mb - d(boxH) - Math.round(gap * 1.6), top = d(m + 0.11), nameBottom = lineY - gap, info = "";
     var num = String(meta.order || "").replace(/^#/, "").trim(), date = labelDate(meta.date) ? "Packed " + labelDate(meta.date) : "";
-    if (/^\d{1,12}$/.test(num)) {
-      // John, 12 Nov: the order number as a QR code a driver's phone scans (Samsara's Driver App reads QR) - at the left above the
-      // rule with the quiet zone it needs, "Order #7738" and "Packed 11/12/26" stacked at its right, the name in the space above.
-      // As drawn and read back in docs/hub/label-previews (app/tools/label_barcodes.js); the digits only, what a driver would type
-      var qn = qrMatrix(num).length, mag = Math.max(2, Math.floor(d(0.32 * Math.pow(s, 0.7)) / qn)), codeH = qn * mag, quiet = 4 * mag;
-      var bandTop = lineY - Math.max(gap, quiet) - codeH, x = Math.max(mx, quiet);
-      info += "^FO" + x + "," + bandTop + "^BQN,2," + mag + "^FDMA," + num + "^FS";
-      var tx = x + codeH + Math.max(quiet, 2 * gap), tw = W - mx - tx, qh = d(Math.min(0.36, 0.12 * Math.pow(s, 0.7))), qmin = d(0.1);
-      var qord = "Order #" + num, qdt = date;
-      while (qh > qmin && Math.max(textW(qord, qh), textW(qdt, qh)) > tw) qh--;
-      if (Math.max(textW(qord, qh), textW(qdt, qh)) > tw) { qord = "#" + num; qdt = labelDate(meta.date); }
-      var ql = [qord].concat(qdt ? [qdt] : []), qy = bandTop + Math.round((codeH - (ql.length * qh + (ql.length - 1) * gap)) / 2);
-      ql.forEach(function (t, j) { info += "^FO" + tx + "," + (qy + j * (qh + gap)) + "^A0N," + qh + "," + qh + "^FB" + tw + ",1,0,R,0^FH^FD" + zplText(t) + "^FS"; });
-      nameBottom = bandTop - Math.max(quiet, gap);   // the code's quiet zone is all the space the name needs above it
-    } else {
-      // no order number, or one that is not a number: the label as it was - the order and the packed day as one line of text
-      var ord = num ? "Order #" + num : "";
-      if (ord || date) {
-        // the info line: about 0.12 in high (never under 0.1 in); if both don't fit side by side, drop the words
-        var ih = d(Math.min(0.36, 0.12 * Math.pow(s, 0.7))), minH = d(0.1);
-        while (ih > minH && textW(ord, ih) + textW(date, ih) + 2 * gap > bw) ih--;
-        if (textW(ord, ih) + textW(date, ih) + 2 * gap > bw) { ord = ord.replace(/^Order /, ""); date = date.replace(/^Packed /, ""); }
-        var iy = lineY - gap - ih;
-        if (ord) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,L,0^FH^FD" + zplText(ord) + "^FS";
-        if (date) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,R,0^FH^FD" + zplText(date) + "^FS";
-        nameBottom = iy - Math.round(gap * 1.6);
-      }
+    // the order and the packed day as one line of text above the rule
+    var ord = num ? "Order #" + num : "";
+    if (ord || date) {
+      // the info line: about 0.12 in high (never under 0.1 in); if both don't fit side by side, drop the words
+      var ih = d(Math.min(0.36, 0.12 * Math.pow(s, 0.7))), minH = d(0.1);
+      while (ih > minH && textW(ord, ih) + textW(date, ih) + 2 * gap > bw) ih--;
+      if (textW(ord, ih) + textW(date, ih) + 2 * gap > bw) { ord = ord.replace(/^Order /, ""); date = date.replace(/^Packed /, ""); }
+      var iy = lineY - gap - ih;
+      if (ord) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,L,0^FH^FD" + zplText(ord) + "^FS";
+      if (date) info += "^FO" + mx + "," + iy + "^A0N," + ih + "," + ih + "^FB" + bw + ",1,0,R,0^FH^FD" + zplText(date) + "^FS";
+      nameBottom = iy - Math.round(gap * 1.6);
     }
     var areaH = nameBottom - top;
     var fit = fitLabelName(name, bw, areaH, dpi, s >= 3 ? 5 : 3, true);
@@ -3370,6 +3356,22 @@ var CORE = (function () {
     return out + info + "^FO" + mx + "," + lineY + "^GB" + bw + "," + th + "," + th + "^FS" +
       "^FO" + mx + "," + (lineY + th + gap) + "^A0N," + d(boxH) + "," + d(boxH) + "^FB" + bw + ",1,0,C,0^FDBox " + i + " of " + n + "^FS" +
       "^PQ1^XZ\n";
+  }
+  // John, 19 Nov: one label an order with nothing on it but the order number as a QR code, as big as the label lets it be - the
+  // driver's phone read the box label's other print. The digits only (what a driver would type), error correction M as on the box
+  // labels from 12 Nov. The Zebra feeds about 0.1 in high (16 Nov), so the code is centred in the label below 0.11 in; a quiet zone of
+  // 3 modules a side at the least; ^BQ magnifies 10 times at most. "" when the order is not a number (no code to scan).
+  function orderQrZPL(order, dpi, sizeKey) {
+    var num = String(order == null ? "" : order).replace(/^#/, "").trim();
+    if (!/^\d{1,12}$/.test(num)) return "";
+    var sz = LABEL_SIZES[sizeKey] || LABEL_SIZES["2.25x1.25"];
+    dpi = dpi || 203;
+    var d = function (inch) { return Math.round(inch * dpi); };
+    // as large as fits with 4 modules of white on every side (the QR quiet zone), below the 0.11 in the Zebra feeds high and above the
+    // bottom edge when it doesn't: centred in what is left once that 0.11 in is taken off
+    var W = d(sz.w), L = d(sz.h), feed = d(0.11), qn = qrMatrix(num).length;
+    var mag = Math.max(2, Math.min(10, Math.floor(Math.min(W, L - feed) / (qn + 8)))), size = qn * mag;
+    return "^XA^CI28^PW" + W + "^LL" + L + "^LH0,0^FO" + Math.floor((W - size) / 2) + "," + (feed + Math.floor((L - feed - size) / 2)) + "^BQN,2," + mag + "^FDMA," + num + "^FS^PQ1^XZ\n";
   }
 
   /* ---------- settings entry ---------- */
@@ -5693,7 +5695,7 @@ var CORE = (function () {
     spotOf: spotOf, spotsOf: spotsOf, walkText: walkText, countTotal: countTotal, countFar: countFar,
     CFG: CFG, num: num, round: round, localDay: localDay, clean: clean, esc: esc, waitDays: waitDays,
     buildCatalog: buildCatalog, unitWord: unitWord, unitPer: unitPer, unitLabel: unitLabel, countWords: countWords, orderDayText: orderDayText, missWords: missWords, lastCountAt: lastCountAt, qtyText: qtyText, eachText: eachText, eachOf: eachOf, unitsOf: unitsOf, stepFor: stepFor, slipEach: slipEach,
-    normName: normName, matchName: matchName, excelSection: excelSection, XL_SECTIONS: XL_SECTIONS, SETTINGS_KEYS: SETTINGS_KEYS, LABEL_SIZES: LABEL_SIZES, labelZPL: labelZPL, labelDate: labelDate, zplText: zplText, wrapLines: wrapLines, fitLabelName: fitLabelName,
+    normName: normName, matchName: matchName, excelSection: excelSection, XL_SECTIONS: XL_SECTIONS, SETTINGS_KEYS: SETTINGS_KEYS, LABEL_SIZES: LABEL_SIZES, labelZPL: labelZPL, orderQrZPL: orderQrZPL, labelDate: labelDate, zplText: zplText, wrapLines: wrapLines, fitLabelName: fitLabelName,
     DEFAULT_ZONES: DEFAULT_ZONES, locKey: locKey, locSpell: locSpell, pickSort: pickSort, sectionSort: sectionSort,
     flatten: flatten, entryNumber: entryNumber, entryWhen: entryWhen, entryStatus: entryStatus,
     normalizeOrder: normalizeOrder, normalizeSlip: normalizeSlip, normalizeLog: normalizeLog, labWeek: labWeek, normalizeLab: normalizeLab, labDepts: labDepts, labLatestCount: labLatestCount, labStock: labStock, labOrdered: labOrdered, labView: labView, labApproved: labApproved, labPrune: labPrune, labWeekLines: labWeekLines, labLastWeek: labLastWeek, labLineTimes: labLineTimes, labLast: labLast, labTouched: labTouched, labCloses: labCloses, labReview: labReview, sha256: sha256, applyLabOverrides: applyLabOverrides, labFill: labFill, LAB_TH_HEAD: LAB_TH_HEAD, labThresholdRows: labThresholdRows, readLabThresholds: readLabThresholds, labThMerge: labThMerge, labEditOv: labEditOv,
@@ -5930,13 +5932,13 @@ if (typeof module !== "undefined") module.exports = PHOTO;
 <script>
 (function () {
 "use strict";
-var BUILD = "f3539777d3";
+var BUILD = "0a18ff886a";
 /* Orion logo (white mark, drawn in the current text colour) from the Orion brand assets */
 var ORION_LOGO = "<svg class=\"logo-svg\" role=\"img\" aria-label=\"Orion\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 356.51 174.22\"><g><g><g><g><path d=\"M93.5,131.83h-50.87c-.26,0-.51.03-.75.07-1.52-2.76-2.78-5.67-3.69-8.75-.63-2.11-.96-4.2-1.07-6.26h65.95c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59H38.18c1.57-5.67,4.69-11.02,8.45-15.92.01,0,.02,0,.03,0h38.78c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59h-30.71c1.94-1.96,3.88-3.8,5.75-5.52,5.4-4.97,11.08-9.66,16.72-14.35.85-.71,1.71-1.42,2.56-2.13,18.06-15.09,35.12-30.58,40.05-55.8.94-4.82-6.34-6.87-7.29-2.03-.66,3.35-1.55,6.52-2.64,9.54-.09,0-.18-.01-.27-.01h-38.78c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h34.92c-1.56,2.86-3.31,5.58-5.22,8.18-.05,0-.1,0-.15,0H16.87c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h75.95c-5.02,5.31-10.6,10.21-16.34,15-.22-.03-.45-.06-.69-.06H24.93c-2.5,0-4.53,2.06-4.53,4.59s2.03,4.59,4.53,4.59h40.49c-8.31,6.89-16.43,13.97-23.17,22.18-6.26,7.63-10.73,16.32-12,25.59-.1.71-.18,1.42-.24,2.14-.39,4.68.06,9.5,1.51,14.39,5.98,20.17,26.9,33.59,42.19,46.05,3.76,3.06,9.14-2.32,5.34-5.41-9.99-8.14-22.09-16.45-30.84-26.88h45.29c2.5,0,4.53-2.05,4.53-4.59s-2.03-4.59-4.53-4.59Z\" fill=\"currentColor\"></path><path d=\"M91.2,87.19c0,2.96,2.37,5.36,5.29,5.36s5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M114.65,106.94c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M104.97,131.06c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M59.14,22.24c2.92,0,5.29-2.4,5.29-5.36s-2.37-5.36-5.29-5.36-5.29,2.4-5.29,5.36,2.37,5.36,5.29,5.36Z\" fill=\"currentColor\"></path><path d=\"M10.58,34.24c0-2.96-2.37-5.35-5.29-5.35s-5.29,2.4-5.29,5.35,2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36Z\" fill=\"currentColor\"></path><path d=\"M13.46,53.01c-2.92,0-5.29,2.4-5.29,5.36s2.37,5.36,5.29,5.36,5.29-2.4,5.29-5.36-2.37-5.36-5.29-5.36Z\" fill=\"currentColor\"></path></g><g><path d=\"M168.64,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM168.64,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M201.57,111.41v-48.6h15.52c4.13,0,7.43.7,9.91,2.11,2.48,1.41,4.26,3.21,5.35,5.39,1.09,2.19,1.64,4.44,1.64,6.78,0,3.11-.73,5.85-2.19,8.23-1.46,2.38-3.72,4.15-6.78,5.32l11.37,20.76h-7.87l-10.42-19.89h-9.76v19.89h-6.78ZM208.35,85.61h9.33c3.01,0,5.29-.75,6.85-2.26,1.55-1.5,2.33-3.52,2.33-6.05,0-2.67-.83-4.75-2.48-6.23-1.65-1.48-3.93-2.22-6.85-2.22h-9.18v16.76Z\" fill=\"currentColor\"></path><path d=\"M243.17,111.41v-48.6h6.99v48.6h-6.99Z\" fill=\"currentColor\"></path><path d=\"M283.14,112.64c-3.5,0-6.75-.66-9.76-1.97-3.01-1.31-5.64-3.14-7.87-5.5-2.23-2.36-3.98-5.08-5.25-8.16-1.26-3.08-1.89-6.4-1.89-9.94s.62-6.86,1.86-9.95c1.24-3.08,2.99-5.79,5.25-8.12,2.26-2.33,4.89-4.15,7.91-5.46,3.01-1.31,6.27-1.97,9.76-1.97s6.75.66,9.76,1.97c3.01,1.31,5.65,3.13,7.91,5.46,2.26,2.33,4.02,5.04,5.28,8.12,1.26,3.09,1.89,6.4,1.89,9.95s-.63,6.86-1.89,9.94c-1.26,3.09-3.02,5.8-5.28,8.16-2.26,2.36-4.89,4.19-7.91,5.5-3.01,1.31-6.27,1.97-9.76,1.97ZM283.14,106.09c3.54,0,6.63-.87,9.25-2.62,2.62-1.75,4.66-4.07,6.12-6.96,1.46-2.89,2.19-6.06,2.19-9.51s-.72-6.69-2.15-9.58c-1.43-2.89-3.46-5.2-6.08-6.92-2.62-1.72-5.73-2.59-9.33-2.59s-6.63.86-9.25,2.59c-2.62,1.72-4.65,4.03-6.08,6.92-1.43,2.89-2.15,6.08-2.15,9.58s.72,6.62,2.15,9.51c1.43,2.89,3.46,5.21,6.08,6.96,2.62,1.75,5.71,2.62,9.25,2.62Z\" fill=\"currentColor\"></path><path d=\"M316.08,111.41v-48.6h7.07l26.52,37.96v-37.96h6.85v48.6h-6.99l-26.59-38.03v38.03h-6.85Z\" fill=\"currentColor\"></path></g></g></g></g></svg>";
 
 /* ===== Orion Warehouse app — part 1: storage, state, Cognito API, sync, outbox ===== */
 var C = CORE, CFG = C.CFG;
-var VERSION = "1.4.18 · 19 Nov 2026";
+var VERSION = "1.4.19 · 19 Nov 2026";
 
 /* ---------- local storage (per device) ---------- */
 var LS = {
@@ -10792,7 +10794,8 @@ function printLabels(slips) {
     return zbDpi();
   }).then(function (dpi) {
     var zpl = "", n = 0;
-    slips.forEach(function (s) { var b = slipBoxes(s); for (var i = 1; i <= b; i++) { zpl += C.labelZPL(s.shipTo || "", i, b, dpi, SET.labels, { order: s.order, date: s.shipDate }); n++; } });
+    // John, 19 Nov: first one label with the order's QR code and nothing else (one an order, however many boxes), then the box labels
+    slips.forEach(function (s) { var b = slipBoxes(s); zpl += C.orderQrZPL(s.order, dpi, SET.labels); for (var i = 1; i <= b; i++) { zpl += C.labelZPL(s.shipTo || "", i, b, dpi, SET.labels, { order: s.order, date: s.shipDate }); n++; } });
     return zbFetch("write", JSON.stringify({ device: ZB.dev, data: zpl })).then(function () { return n; });
   }).then(function (n) {
     slips.forEach(function (s) { if (s.num && ST.printed[s.num]) ST.printed[s.num].lab = slipBoxes(s); });
@@ -10955,7 +10958,7 @@ ACT.stTest = function () {
 };
 function labelsAgain(slips, what) {
   toast("Sending " + what + " to the label printer…");
-  printLabels(slips).then(function (r) { toast(r.err ? "Labels didn’t print: " + r.err : r.n === 1 ? "1 label printed" : r.n + " labels printed", r.err ? 6000 : 2600); render(); focusPrint(); });
+  printLabels(slips).then(function (r) { toast(r.err ? "Labels didn’t print: " + r.err : r.n === 1 ? "1 box label printed" : r.n + " box labels printed", r.err ? 6000 : 2600); render(); focusPrint(); });
 }
 ACT.stTestLabel = function () { labelsAgain([{ type: "Packed", shipTo: "Test label: Orion Warehouse", boxes: 1 }], "a test label"); };
 ACT.stLab = function (el, e) { if (e && e.stopPropagation) e.stopPropagation(); var s = S.slips[el.getAttribute("data-num")]; if (s) labelsAgain([s], "the labels for slip #" + s.num); };
